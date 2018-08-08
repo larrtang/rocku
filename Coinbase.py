@@ -13,7 +13,19 @@ class Coinbase(Exchange):
 
 
     def getLastTradedPrice(self, pair):
-        return self.client.get_spot_price(currency_pair = pair)['amount']       
+        return float(self.client.get_spot_price(currency_pair = pair)['amount'])   
 
+    def getPortfolioValue(self):
+        value = 0
+        for k, v in self.assets.items():
+            if k == 'btc':
+                value += v * self.getLastTradedPrice('BTC-USD')
+            if k == 'eth':
+                value += v * self.getLastTradedPrice('ETH-USD')
+            if k == 'usd':
+                value += v
 
+        return value
 
+    def pretendBuyBTC():
+        

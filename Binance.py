@@ -16,8 +16,19 @@ class Binance(Exchange):
     def getLastTradedPrice(self, pair):
         tickers = self.client.get_all_tickers()
         if pair == 'BTCUSDT':
-            return tickers[11]['price']
+            return float(tickers[11]['price'])
         elif pair == 'ETHUSDT':
-            return tickers[12]['price']
+            return float(tickers[12]['price'])
 
                 
+    def getPortfolioValue(self):
+        value = 0
+        for k, v in self.assets.items():
+            if k == 'btc':
+                value += v * self.getLastTradedPrice('BTCUSDT')
+            if k == 'eth':
+                value += v * self.getLastTradedPrice('ETHUSDT')
+            if k == 'usd':
+                value += v
+
+        return value

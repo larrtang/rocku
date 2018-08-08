@@ -1,13 +1,10 @@
 from Coinbase import Coinbase
 from Binance import Binance
+from engine import Engine
 
 def main():
-    coinbase = Coinbase()
-    binance = Binance()
-    while 1 == 1:
-        print(coinbase.getLastTradedPrice('ETH-USD'))
-        print(binance.getLastTradedPrice('ETHUSDT'))
-
-
+    engine = Engine()
+    print(engine.getTotalPortfolioValue())
+    engine.run()
 if __name__ == "__main__":
     main()
