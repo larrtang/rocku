@@ -11,7 +11,7 @@ class Binance(Exchange):
         self.client = Client(self.api_key, self.api_secret)
 
     def getMarketDepth(self, sym):
-        return client.get_order_book(symbol=sym)
+        return self.client.get_order_book(symbol=sym)
 
     def getLastTradedPrice(self, pair):
         tickers = self.client.get_all_tickers()
@@ -32,3 +32,11 @@ class Binance(Exchange):
                 value += v
 
         return value
+
+    def buy(self, currency, amount):
+        order = self.client.order_market_buy(symbol=currency, quantity=amount)
+        return order
+
+    def sell(self, currency, amount):
+        order = self.client.order_market_sell(symbol=currency, quantity=amount)
+        return order

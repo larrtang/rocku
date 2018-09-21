@@ -10,7 +10,7 @@ class Coinbase(Exchange):
         self.api_key = ''
         self.api_secret = ''
         self.client = Client(self.api_key, self.api_secret)
-
+        self.account_id = ''
 
     def getLastTradedPrice(self, pair):
         return float(self.client.get_spot_price(currency_pair = pair)['amount'])   
@@ -27,5 +27,13 @@ class Coinbase(Exchange):
 
         return value
 
-    def pretendBuyBTC():
-        
+    def buy(self, currency, amount):
+        order = self.client.buy(self.account_id, amount=amount, currency=currency)
+        order.commit()
+        return order 
+
+    def sell(self, currency, amount):
+        order = self.client.sell(self.account_id, amount=amount, currency=currency)
+        order.commit()
+        return order
+
