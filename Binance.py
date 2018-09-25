@@ -5,10 +5,19 @@ from binance.client import Client
 class Binance(Exchange):
 
     def __init__(self):
-        super().__init__()
+        self.assets = {
+            'btc' : 40,
+            'eth' : 20,
+            'usd' : 10000000000
+        }
+       
         self.api_key = ''
         self.api_secret = ''
         self.client = Client(self.api_key, self.api_secret)
+        
+        self.taker_fee = 0.000
+        # TODO: Get assets manually
+    
 
     def getMarketDepth(self, sym):
         return self.client.get_order_book(symbol=sym)
