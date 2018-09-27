@@ -1,5 +1,6 @@
 from Coinbase import Coinbase
 from Binance import Binance
+import cbpro
 
 class Engine:
 
@@ -15,6 +16,7 @@ class Engine:
             'eth' : 1,
             'usd' : 1000
         }
+        self.start_value = 0
 
     def getTotalPortfolioValue(self):
         return self.coinbase.getPortfolioValue() + self.binance.getPortfolioValue()
@@ -23,6 +25,13 @@ class Engine:
     def checkBTCUSDT(self):
         coinbase_btc = self.coinbase.getLastTradedPrice('BTC-USD')
         binance_btc = self.binance.getLastTradedPrice('BTCUSDT')
+        
+        binanceOB = self.binance.client.get_order_book(symbol='BTCUSDT', limit= 10)
+        coinbaseOB = cbpro.PublicClient().get_product_order_book('btc-usd', level=2)
+
+        print float(coinbaseOB['bids'][0][0]) 
+        print float(binanceOB['asks'][0][0])
+        
         
         percent_difference = (coinbase_btc - binance_btc)/min(coinbase_btc, binance_btc)
         if abs(percent_difference) > self.Threashold:
@@ -47,18 +56,21 @@ class Engine:
 
 
     
+    def print_info(self):
+        print 
+        print 'Percent Change:', (self.getTotalPortfolioValue()-self.start_value)/self.start_value
+        print 'Profit/Loss:', (self.getTotalPortfolioValue()-self.start_value)
+        print 'Coinbase: \t', [str(i) for k, i in self.coinbase.assets.items()]
+        print 'Binance: \t', [str(i) for k, i in self.binance.assets.items()]
+        print
 
     def run(self):
-        start_value = self.getTotalPortfolioValue()
+        self.start_value = self.getTotalPortfolioValue()
         while True:
             #s = ['XRPUSDT', 'BTCUSDT', 'ETHUSDT']
             self.checkBTCUSDT()
             #ticks = self.binance.client.get_all_tickers()
             #for t in ticks:
             #    if t['symbol'] in s:
-            #        print t['symbol'], '\t', float(t['price'])*1.005
-            print 'Percent Change:', (self.getTotalPortfolioValue()-start_value)/start_value
-            print 'Coinbase: \t', [str(i) for k, i in self.coinbase.assets.items()]
-            print 'Binance: \t', [str(i) for k, i in self.binance.assets.items()]
-            print
-
+            #        print t['symbol'], '\t', float(t['price'])*1.00
+            self.print_info()

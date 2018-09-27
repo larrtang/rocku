@@ -6,16 +6,16 @@ class Binance(Exchange):
 
     def __init__(self):
         self.assets = {
-            'btc' : 40,
-            'eth' : 20,
+            'btc' : 400,
+            'eth' : 0,
             'usd' : 10000000000
         }
        
-        self.api_key = ''
-        self.api_secret = ''
+        self.api_key = 'IUxQsnE724D1R9zKbwGy5YnFQ4uFtGbeHglVyGGv8o25mZA4L5PGpoCCKQJkHHmg'
+        self.api_secret = 'TvaHvvWTxZTzpfDsqDvmEJLf0n3Q5xVjZvxaNReo21qa7y8mIAYjDVmb4ajtCnEZ'
         self.client = Client(self.api_key, self.api_secret)
         
-        self.taker_fee = 0.000
+        self.taker_fee = 0.001
         # TODO: Get assets manually
     
 
@@ -40,7 +40,8 @@ class Binance(Exchange):
             if k == 'usd':
                 value += v
 
-        return value
+        # return value
+        return self.assets['usd']
 
     def buy(self, currency, amount):
         order = self.client.order_market_buy(symbol=currency, quantity=amount)
@@ -48,4 +49,12 @@ class Binance(Exchange):
 
     def sell(self, currency, amount):
         order = self.client.order_market_sell(symbol=currency, quantity=amount)
-        return order
+        return order   
+
+    def getBids(self, limit = 10):
+        orders = self.client.get_order_book(symbol='BTCUSDT', limit= limit)
+        return orders['bids']
+        
+    def getAsks(self, limit = 10):
+        orders = self.client.get_order_book(symbol='BTCUSDT', limit= limit)
+        return orders['asks']
