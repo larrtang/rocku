@@ -6,5 +6,7 @@ def main():
     engine = Engine()
     print(engine.getTotalPortfolioValue())
     engine.run()
+
 if __name__ == "__main__":
     main()
+ 

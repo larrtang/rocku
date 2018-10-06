@@ -9,7 +9,8 @@ class Binance(Exchange):
         self.api_key = ''
         self.api_secret = ''
         self.client = Client(self.api_key, self.api_secret)
-
+        self.fee_rate = 0.001
+        
     def getMarketDepth(self, sym):
         return client.get_order_book(symbol=sym)
 
@@ -32,3 +33,18 @@ class Binance(Exchange):
                 value += v
 
         return value
+
+    def pretend_buy_BTC(self):
+        btc_usd = self.getLastTradedPrice('BTCUSDT')
+        btc_amount = (self.position_sizes['usd'] * (1-self.fee_rate)) / btc_usd
+        
+        self.assets['btc'] += btc_amount
+        self.assets['usd'] -= self.position_sizes['usd']
+    
+    
+    def pretend_sell_BTC(self):         
+        btc_usd = self.getLastTradedPrice('BTCUSDT')
+        btc_amount = (self.position_sizes['usd'] * (1-self.fee_rate)) / btc_usd
+        
+        self.assets['btc'] -= btc_amount
+        self.assets['usd'] += self.position_sizes['usd']
