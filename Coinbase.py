@@ -7,8 +7,8 @@ class Coinbase(Exchange):
 
     def __init__(self):
         super().__init__()
-        self.api_key = ''
-        self.api_secret = ''
+        self.api_key = 'AeHCmiC5WM688cl0'
+        self.api_secret = 'DA23j0sGCAV6qTpBnRt1ZsPK2jrgc2pI'
         self.client = Client(self.api_key, self.api_secret)
         self.fee_rate = 0.0149
 
