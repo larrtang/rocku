@@ -11,8 +11,8 @@ class Coinbase(Exchange):
             'eth' : 0,
             'usd' : 10000000000
         }
-        self.api_key = '1408e8172c342f0278fd8c3dab847354'
-        self.api_secret = 'vCpeLBQpfqj5Ta37qcBkWH+fg//6CoAjjmWRVGqEl7Izu18toEyCcooL/p1N7+ar7eYvYKFskTrXwQVk2+AscQ=='
+        self.api_key = ''
+        self.api_secret = ''
         self.client = Client(self.api_key, self.api_secret)
         self.account_id = ''
 
