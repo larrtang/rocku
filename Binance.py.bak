@@ -8,8 +8,7 @@ MARKET = {
 'ETHUSDT' : 12,
 'MDABTC' : 48,
 'ZRXBTC' : 25,
-'BCCBTC' : 8,
-'BATBTC' : 120
+'BCCBTC' : 8
 }
 
     
@@ -23,83 +22,26 @@ class Binance(Exchange):
             'xrp' : 10000
         }
        
-        self.api_key = ''
-        self.api_secret = ''
+        self.api_key = 'IUxQsnE724D1R9zKbwGy5YnFQ4uFtGbeHglVyGGv8o25mZA4L5PGpoCCKQJkHHmg'
+        self.api_secret = 'TvaHvvWTxZTzpfDsqDvmEJLf0n3Q5xVjZvxaNReo21qa7y8mIAYjDVmb4ajtCnEZ'
         self.client = Client(self.api_key, self.api_secret)
 
 
        
 
             
-        self.order_book = self.client.get_order_book(symbol=market)
-        self.old_order_book = self.order_book
+        self.order_book = self.client.get_order_book
+        
         def websocket_handler(msg):
             # print("message type: {}".format(msg['e']))
             # print(msg)
-            update_bids = msg['b']
-            update_asks = msg['a']
-            
-           # print(update_bids)
-           # print(update_asks)
-            self.old_order_book = self.order_book
+            print type(msg)    
 
-            for bid in update_bids:
-                updated = False
-                for b in range(len(self.order_book['bids'])):
-                    if b >= len(self.order_book['bids']):
-                        #self.order_book['bids'].append(bid)
-                        pass
-                    elif float(bid[0]) == float(self.order_book['bids'][b][0]):
-                        if float(bid[1]) == 0:
-                     #       print('pop')
-                            self.order_book['bids'].pop(b)
-                        else:
-                            self.order_book['bids'][b][1] = bid[1]
-                    #        print(self.order_book['bids'][b])
-                        updated = True
-                    elif float(bid[0]) > float(self.order_book['bids'][b][0]):
-                        if float(bid[1]) != 0:
-                            print('new')
-                            self.order_book['bids'].insert(b, bid)
-                        updated = True
-                    if updated:
-                        break
-                if not updated:
-                    #self.order_book['bids'].append(bid)
-                   # pr
-                   # int('fucked')
-                   pass
-            
-            for ask in update_asks:
-                updated = False
-                for a in range(len(self.order_book['asks'])):
-                    if a >= len(self.order_book['asks']):
-                        #self.order_book['asks'].append(ask)
-                        pass
-                    elif float(ask[0]) == float(self.order_book['asks'][a][0]):
-                        if float(ask[1]) == 0:
-                            #print ('pop ask')
-                            self.order_book['asks'].pop(a)
-                        else:
-                            self.order_book['asks'][a][1] = ask[1]               
-                           # print (self.order_book['asks'][a] )        
-                        updated = True
-                    elif float(ask[0]) < float(self.order_book['asks'][a][0]):
-                        #print(ask)
-                        if float(ask[1]) != 0:
-                            self.order_book['bids'].insert(a, ask)
-                        updated = True
-                    
-                    if updated:
-                        break
-                if not updated:
-                    #self.order_book['asks'].append(ask)
-                    pass
 
         self.bm = BinanceSocketManager(self.client, user_timeout=60)
         self.conn_key = self.bm.start_depth_socket(market, websocket_handler)
         # # then start the socket manager
-        #self.bm.start()
+        self.bm.start()
       
         self.taker_fee = 0.001 * 1
         # TODO: Get assets manually
@@ -108,8 +50,6 @@ class Binance(Exchange):
     def getMarketDepth(self, sym):
         try:
             return self.client.get_order_book(symbol=sym)
-            #print(len(self.order_book['bids']))
-            #return self.order_book
         except:
             return None
 
@@ -119,7 +59,7 @@ class Binance(Exchange):
         
             return float(tickers[MARKET[pair]]['price'] )
         except Exception as e:
-            print(e)
+            print e
             return -1
 
         # if pair == 'BTCUSDT':
