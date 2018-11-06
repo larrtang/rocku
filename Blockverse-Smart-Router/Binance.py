@@ -1,4 +1,3 @@
-from exchange import Exchange
 from binance.client import Client
 from binance.websockets import BinanceSocketManager
 
@@ -19,15 +18,9 @@ MARKET = {
 }
 
 
-class Binance(Exchange):
+class Binance:
 
     def __init__(self, market='MDABTC'):
-        self.assets = {
-            'btc' : 2,
-            'eth' : 0,
-            'usd' : 10000000000,
-            'xrp' : 10000
-        }
        
         self.api_key = ''
         self.api_secret = ''
@@ -182,9 +175,16 @@ class Binance(Exchange):
     def getAsks(self, limit = 10):
         orders = self.client.get_order_book(symbol='BTCUSDT', limit= limit)
         return orders['asks']
+    
 
+    def getOrderStatus(self, sym, orderID):
+        return self.client.get_order(symbol=sym, orderId=orderID)
 
+    def allOrdersFilled(self, sym):
+        orders = self.client.get_open_orders(symbol=sym)
+        return order is None or len(orders) == 0 
 
+    
 '''
 Binance Ticker Table:
 

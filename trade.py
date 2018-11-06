@@ -29,10 +29,9 @@ print(market)
 
 
 
-
-indices = [1,3,10,20,35]
-buy_threadshold = 2
-sell_threadshold = 0.85
+indices = [0,2,5,8,11]
+buy_threadshold = 3
+sell_threadshold = 0.8
 
 
 def buy(client, price, vol):
@@ -75,13 +74,19 @@ def main():
     down_count = 0
     direction = ''
     bought = False
-
-    btc_start = float(binance.client.get_asset_balance(asset=market[3:])['free'])
-    other_start = float(binance.client.get_asset_balance(asset=market[:3])['free'])
+    bid_list = []
+    ask_list = []
+    ma = 100
+    fixed_quant = 0
+    btc_start = float(binance.client.get_asset_balance(asset=market[-3:])['free'])
+    other_start = float(binance.client.get_asset_balance(asset=market[:-3])['free'])
     # for i in  range(len(binance.client.get_all_tickers())):
-    #     print i, binance.client.get_all_tickers()[i]
-    
-
+    #     print( i, binance.client.get_all_tickers()[i])
+    print_quant_once = False
+    avg_bid = 0
+    avg_ask = 0
+    lavg_bid = 0
+    lavg_ask = 0
     while True:
         feat = [0,0,0,0,0]
         state = [[0,0,0,0,0],[0,0,0,0,0]]
@@ -94,10 +99,10 @@ def main():
                 #print depth_of_market['bids']
                 
 
-
+                
                 if i in indices:
                     t = depth_of_market['bids'][i][1]/depth_of_market['asks'][i][1]
-                 
+
                  #   if last_depth == None: print('penis')
                     if last_depth != None:
                         #print(depth_of_market['bids'][i][1] ,last_depth['bids'][i][1])
@@ -182,30 +187,40 @@ def main():
                             feat[3] = 0
                         elif i == indices[4]:
                             feat[4] = 0
-            
+
+            bid_list.append(depth_of_market['bids'][indices[2]][1])
+            ask_list.append(depth_of_market['asks'][indices[2]][1])
+            if len(bid_list) > ma: bid_list.pop(0)
+            if len(ask_list) > ma: ask_list.pop(0)
+
+            avg_bid = float(sum(bid_list) / float(len(bid_list)))
+            avg_ask = float(sum(ask_list) / float(len(ask_list)))
+
         except Exception as e:
             print('Exception caught in depth loop.')
             print(e) 
         price =  binance.getLastTradedPrice(market)
         try:
-            btc_all = binance.client.get_asset_balance(asset=market[3:])
-            mda_all = binance.client.get_asset_balance(asset=market[:3])
+            btc_all = binance.client.get_asset_balance(asset=market[-3:])
+            mda_all = binance.client.get_asset_balance(asset=market[:-3])
             mda = float(mda_all['free'])
             btc = float(btc_all['free'])
         except Exception as e:
             print("Exception caught in get asset balance")
             print(e)
         quantity = round((btc_start/2)/price,3) # btc/binance.getLastTradedPrice('MDABTC')
-        
         #check if only trades integer quantities
         if quantity > 1:
             quantity = floor(quantity)
+        if print_quant_once == False:
+            print(quantity)
+            print_quant_once = True
         if (state[0][3] == 1 and state[0][2] == 1 and state[0][1] == 1)  and( state[1][1] == -1 or state[1][2] == -1 or state[1][3] == -1 or state[1][4] == -1) and feat[0] == 1 and feat[1] == 1 and feat[2] == 1 and feat[3] == 1 and feat[4] == 1:
             print('^^^')
             up_count += 1
             if down_count > 0: down_count -= 1 
             else: down_count = 0
-            if up_count > 5 and direction !=  C.OKGREEN + '^^^ Bullish ^^^' + C.ENDC:
+            if up_count > 5 and direction !=  C.OKGREEN + '^^^ Bullish ^^^' + C.ENDC and depth_of_market['bids'][indices[2]][1]/avg_bid >1.2:
                 direction = C.OKGREEN + '^^^ Bullish ^^^' + C.ENDC
                 # buy
                 #mda = btc/binance.getLastTradedPrice('MDABTC')
@@ -213,11 +228,12 @@ def main():
 
                 buy(binance.client, binance.getLastTradedPrice(market), 
                 quantity)
+                fixed_quant = quantity
                 bought = True
                 up_count = 0
                 down_count = 0
 
-        elif (state[1][3] == 1 or state[0][3] == -1) and (feat[0] == -1 and feat[1] == -1 and feat[2] == -1 ) and ( feat[3] == -1 or feat[4] == -1):
+        elif (state[1][3] == 1 or state[0][3] == -1) and (feat[0] == -1 and feat[1] == -1 and feat[2] == -1 ) and ( feat[3] == -1 and feat[4] == -1):
             print('!!!')
             down_count += 1
             if up_count > 0: up_count -= 1 
@@ -229,7 +245,7 @@ def main():
                     #mda = 0
 
                     sell(binance.client, binance.getLastTradedPrice(market), 
-                    quantity)
+                    fixed_quant)
                     print(C.OKBLUE + 'Bitcoin:\t'+str(btc) + C.ENDC)
                     bought = False
                 down_count = 0
@@ -238,14 +254,22 @@ def main():
             print()
 
         
-        percentchange = float(btc +float(mda*price) - (btc_start+float(other_start*price)))/float(btc_start+other_start*price) * 100
-        print(feat)
+        percentchange = float(btc +float(mda*price) - (btc_start))/float(btc_start) * 100
+        print(feat, end='\t')
+        print('\tavg bid:', round(avg_bid,2), end=' ')
+        if (avg_bid > lavg_bid): print('^', end=' ')
+        else: print(' ', end=' ')
+        print('\tavg ask:',round(avg_ask,2), end=' ')
+        if (avg_ask > lavg_ask): print('!')
+        else: print()
         print(state)
         print(C.OKBLUE + '--> '+str(btc_all) +'\n--> '+ str(mda_all) +C.ENDC + '\t\t\t\t\t\t\t\t', end=' ')
         if (percentchange >= 0): print(C.OKGREEN , '+' +str(percentchange) +'%'+ C.ENDC) 
         else: print(C.OKBLUE + "-"+ str(percentchange) +'%'+ C.ENDC) 
         print() 
         print(direction)
+        lavg_bid = avg_bid
+        lavg_ask = avg_ask
         last_feat = feat
         last_depth = depth_of_market
         last_state = state
