@@ -183,7 +183,11 @@ class Binance:
     def allOrdersFilled(self, sym):
         orders = self.client.get_open_orders(symbol=sym)
         return order is None or len(orders) == 0 
+    
 
+    def cancelOrder(self, sym, orderID):
+        result = client.cancel_order(symbol=sym, orderId=orderID)
+        return result
     
 '''
 Binance Ticker Table:
