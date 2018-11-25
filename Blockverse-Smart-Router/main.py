@@ -16,8 +16,9 @@ SQL_DB = 'peatio_development'
 db = MySQLdb.connect(host=SQL_HOST, user=SQL_USER, passwd=SQL_PASS, db=SQL_DB)
 cur = db.cursor()
 
-
 pending_orders = []
+
+
 '''
 Market Data Endpoint
 
@@ -43,8 +44,8 @@ class OrderRouter(Resource):
     # takes care of peatio database values when trading 
     def __order_syncDatabase(self, member_id, trade, side, order, market, price, quantity):
         if type(trade) is not int and (order == 'market' or trade['status'] == 'FILLED'):
-            base = market[3:]
-            coin = market[:3]
+            base = market[3:].lower()
+            coin = market[:3].lower()
 
             cur.execute("""SELECT `balance` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = `%s`;"""%(member_id, base))
             base_bal = cur.fetchone()
@@ -121,9 +122,9 @@ class OrderRouter(Resource):
     def __check_balance(self, member_id, side, market, price, quantity):
         base = 'usdt'
         if side == 'buy':
-            base = market[3:]
+            base = market[3:].lower()
         if side == 'sell':
-            base = market[:3]
+            base = market[:3].lower()
         print base
         cur.execute("""SELECT `balance` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = `%s`;"""%(member_id, base))
 
@@ -144,9 +145,9 @@ class OrderRouter(Resource):
     # Returns order status of orderID
     # Returns 0 if all orders filled
     def get(self):
-        oid = request.args.get('id') # Trade's ID 
+        oid = int(request.args.get('id')) # Trade's ID 
         market = request.args.get('market') # Trade's ID 
-        member_id = request.args.get('member_id')
+        member_id = int(request.args.get('member_id'))
         if binance.allOrdersFilled(market):
             return 0
         
@@ -163,9 +164,9 @@ class OrderRouter(Resource):
         side = request.args.get('side')     #buy/sell
         order = request.args.get('order')   #limit/market
         market = request.args.get('market')
-        price = request.args.get('price')
-        quantity = request.args.get('quantity')
-        member_id = request.args.get('member_id')
+        price = float(request.args.get('price'))
+        quantity = float(request.args.get('quantity'))
+        member_id = int(request.args.get('member_id'))
 
         market_price = binance.getMarketPrice(market)
 
@@ -192,7 +193,7 @@ class OrderRouter(Resource):
     #cancel orders
     def delete(self):
         market = request.args.get('market')
-        oid = request.args.get('id')
+        oid = int(request.args.get('id'))
 
         binance.cancelOrder(market, oid)
 
