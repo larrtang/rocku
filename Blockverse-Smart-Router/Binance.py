@@ -3,6 +3,7 @@ from binance.websockets import BinanceSocketManager
 
 
 MARKET = {
+'ETHBTC' : 0,
 'BTCUSDT' : 11,
 'ETHUSDT' : 12,
 'MDABTC' : 48,

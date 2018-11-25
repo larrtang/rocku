@@ -55,6 +55,9 @@ class OrderRouter(Resource):
             new_base_bal = base_bal
             new_coin_bal = coin_bal
 
+            print 
+            print base, 'bal:', base_bal
+            print coin, 'bal:', coin_bal
             if side == 'buy':
                 new_base_bal = base_bal - price*quantity
                 new_coin_bal = coin_bal + quantity 
@@ -62,8 +65,14 @@ class OrderRouter(Resource):
                 new_base_bal = base_bal + price*quantity
                 new_coin_bal = coin_bal - quantity
 
+            print
+            print 'new', base, 'bal:', new_base_bal
+            print 'new', coin, 'bal:', new_coin_bal
+
             cur.execute("""UPDATE `accounts` SET `balance` = %f WHERE `member_id` = %i AND `currency_id` = '%s';"""%(new_base_bal, member_id, base))
+            db.commit()
             cur.execute("""UPDATE `accounts` SET `balance` = %f WHERE `member_id` = %i AND `currency_id` = '%s';"""%(new_coin_bal, member_id, coin))
+            db.commit()
 
             if trade['orderId'] in pending_orders:
                 cur.execute("""SELECT `locked` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = '%s';"""%(member_id, base))
@@ -77,10 +86,11 @@ class OrderRouter(Resource):
                 if side == 'buy':
                     new_base_bal_locked -= price*quantity
                     cur.execute("""UPDATE `accounts` SET `locked` = %f WHERE `member_id` = %i AND `currency_id` = '%s';"""%(new_base_bal_locked, member_id, base))                
+                    db.commit()
                 elif side == 'sell':
                     new_coin_bal_locked -= quantity
                     cur.execute("""UPDATE `accounts` SET `locked` = %f WHERE `member_id` = %i AND `currency_id` = '%s';"""%(new_coin_bal_locked, member_id, coin))    
-
+                    db.commit()
                 pending_orders.remove(trade['orderId'])
         
         
@@ -107,13 +117,16 @@ class OrderRouter(Resource):
                 new_base_bal = base_bal - price*quantity
                 new_base_bal_locked += price*quantity
                 cur.execute("""UPDATE `accounts` SET `balance` = %f WHERE `member_id` = %i AND `currency_id` = '%s';"""%(new_base_bal, member_id, base))
+                db.commit()
                 cur.execute("""UPDATE `accounts` SET `locked` = %f WHERE `member_id` = %i AND `currency_id` = '%s';"""%(new_base_bal_locked, member_id, base))                
+                db.commit()
             elif side == 'sell':
                 new_coin_bal = coin_bal - quantity
                 new_coin_bal_locked += quantity
                 cur.execute("""UPDATE `accounts` SET `balance` = %f WHERE `member_id` = %i AND `currency_id` = '%s';"""%(new_coin_bal, member_id, coin))
+                db.commit()
                 cur.execute("""UPDATE `accounts` SET `locked` = %f WHERE `member_id` = %i AND `currency_id` = '%s';"""%(new_coin_bal_locked, member_id, coin))                
-
+                db.commit()
             pending_orders.append(trade['orderId'])
 
 
