@@ -47,9 +47,9 @@ class OrderRouter(Resource):
             base = market[3:].lower()
             coin = market[:3].lower()
 
-            cur.execute("""SELECT `balance` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = `%s`;"""%(member_id, base))
+            cur.execute("""SELECT `balance` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = '%s';"""%(member_id, base))
             base_bal = cur.fetchone()
-            cur.execute("""SELECT `balance` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = `%s`;"""%(member_id, coin))
+            cur.execute("""SELECT `balance` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = '%s';"""%(member_id, coin))
             coin_bal = cur.fetchone()    
 
             new_base_bal = base_bal
@@ -62,13 +62,13 @@ class OrderRouter(Resource):
                 new_base_bal = base_bal + price*quantity
                 new_coin_bal = coin_bal - quantity
 
-            cur.execute("""UPDATE `accounts` SET `balance` = %f WHERE `member_id` = %i AND `currency_id` = `%s`;"""%(new_base_bal, member_id, base))
-            cur.execute("""UPDATE `accounts` SET `balance` = %f WHERE `member_id` = %i AND `currency_id` = `%s`;"""%(new_coin_bal, member_id, coin))
+            cur.execute("""UPDATE `accounts` SET `balance` = %f WHERE `member_id` = %i AND `currency_id` = '%s';"""%(new_base_bal, member_id, base))
+            cur.execute("""UPDATE `accounts` SET `balance` = %f WHERE `member_id` = %i AND `currency_id` = '%s';"""%(new_coin_bal, member_id, coin))
 
             if trade['orderId'] in pending_orders:
-                cur.execute("""SELECT `locked` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = `%s`;"""%(member_id, base))
+                cur.execute("""SELECT `locked` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = '%s';"""%(member_id, base))
                 base_bal_locked = cur.fetchone()
-                cur.execute("""SELECT `locked` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = `%s`;"""%(member_id, coin))
+                cur.execute("""SELECT `locked` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = '%s';"""%(member_id, coin))
                 coin_bal_locked = cur.fetchone()
 
                 new_base_bal_locked = base_bal_locked
@@ -76,10 +76,10 @@ class OrderRouter(Resource):
 
                 if side == 'buy':
                     new_base_bal_locked -= price*quantity
-                    cur.execute("""UPDATE `accounts` SET `locked` = %f WHERE `member_id` = %i AND `currency_id` = `%s`;"""%(new_base_bal_locked, member_id, base))                
+                    cur.execute("""UPDATE `accounts` SET `locked` = %f WHERE `member_id` = %i AND `currency_id` = '%s';"""%(new_base_bal_locked, member_id, base))                
                 elif side == 'sell':
                     new_coin_bal_locked -= quantity
-                    cur.execute("""UPDATE `accounts` SET `locked` = %f WHERE `member_id` = %i AND `currency_id` = `%s`;"""%(new_coin_bal_locked, member_id, coin))    
+                    cur.execute("""UPDATE `accounts` SET `locked` = %f WHERE `member_id` = %i AND `currency_id` = '%s';"""%(new_coin_bal_locked, member_id, coin))    
 
                 pending_orders.remove(trade['orderId'])
         
@@ -89,13 +89,13 @@ class OrderRouter(Resource):
             base = market[3:]
             coin = market[:3]
 
-            cur.execute("""SELECT `balance` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = `%s`;"""%(member_id, base))
+            cur.execute("""SELECT `balance` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = '%s';"""%(member_id, base))
             base_bal = cur.fetchone()
-            cur.execute("""SELECT `balance` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = `%s`;"""%(member_id, coin))
+            cur.execute("""SELECT `balance` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = '%s';"""%(member_id, coin))
             coin_bal = cur.fetchone()    
-            cur.execute("""SELECT `locked` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = `%s`;"""%(member_id, base))
+            cur.execute("""SELECT `locked` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = '%s';"""%(member_id, base))
             base_bal_locked = cur.fetchone()
-            cur.execute("""SELECT `locked` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = `%s`;"""%(member_id, coin))
+            cur.execute("""SELECT `locked` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = '%s';"""%(member_id, coin))
             coin_bal_locked = cur.fetchone()
             
             new_base_bal = base_bal
@@ -106,13 +106,13 @@ class OrderRouter(Resource):
             if side == 'buy':
                 new_base_bal = base_bal - price*quantity
                 new_base_bal_locked += price*quantity
-                cur.execute("""UPDATE `accounts` SET `balance` = %f WHERE `member_id` = %i AND `currency_id` = `%s`;"""%(new_base_bal, member_id, base))
-                cur.execute("""UPDATE `accounts` SET `locked` = %f WHERE `member_id` = %i AND `currency_id` = `%s`;"""%(new_base_bal_locked, member_id, base))                
+                cur.execute("""UPDATE `accounts` SET `balance` = %f WHERE `member_id` = %i AND `currency_id` = '%s';"""%(new_base_bal, member_id, base))
+                cur.execute("""UPDATE `accounts` SET `locked` = %f WHERE `member_id` = %i AND `currency_id` = '%s';"""%(new_base_bal_locked, member_id, base))                
             elif side == 'sell':
                 new_coin_bal = coin_bal - quantity
                 new_coin_bal_locked += quantity
-                cur.execute("""UPDATE `accounts` SET `balance` = %f WHERE `member_id` = %i AND `currency_id` = `%s`;"""%(new_coin_bal, member_id, coin))
-                cur.execute("""UPDATE `accounts` SET `locked` = %f WHERE `member_id` = %i AND `currency_id` = `%s`;"""%(new_coin_bal_locked, member_id, coin))                
+                cur.execute("""UPDATE `accounts` SET `balance` = %f WHERE `member_id` = %i AND `currency_id` = '%s';"""%(new_coin_bal, member_id, coin))
+                cur.execute("""UPDATE `accounts` SET `locked` = %f WHERE `member_id` = %i AND `currency_id` = '%s';"""%(new_coin_bal_locked, member_id, coin))                
 
             pending_orders.append(trade['orderId'])
 
@@ -126,7 +126,7 @@ class OrderRouter(Resource):
         if side == 'sell':
             base = market[:3].lower()
         print base
-        cur.execute("""SELECT `balance` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = `%s`;"""%(member_id, base))
+        cur.execute("""SELECT `balance` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = '%s';"""%(member_id, base))
 
         balance = cur.fetchone()
         print balance
@@ -164,7 +164,11 @@ class OrderRouter(Resource):
         side = request.args.get('side')     #buy/sell
         order = request.args.get('order')   #limit/market
         market = request.args.get('market')
-        price = float(request.args.get('price'))
+        price = 0.0
+        try:
+            price = float(request.args.get('price'))
+        except:
+            print "Price Omitted"
         quantity = float(request.args.get('quantity'))
         member_id = int(request.args.get('member_id'))
 
@@ -206,7 +210,7 @@ def main():
 
     api.add_resource(OrderRouter, '/order')
     api.add_resource(MarketData, '/')
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0')
 
 
 
