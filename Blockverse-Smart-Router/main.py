@@ -48,9 +48,9 @@ class OrderRouter(Resource):
             coin = market[:3].lower()
 
             cur.execute("""SELECT `balance` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = '%s';"""%(member_id, base))
-            base_bal = cur.fetchone()
+            base_bal = float(cur.fetchone()[0])
             cur.execute("""SELECT `balance` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = '%s';"""%(member_id, coin))
-            coin_bal = cur.fetchone()    
+            coin_bal = float(cur.fetchone()[0])
 
             new_base_bal = base_bal
             new_coin_bal = coin_bal
@@ -67,9 +67,9 @@ class OrderRouter(Resource):
 
             if trade['orderId'] in pending_orders:
                 cur.execute("""SELECT `locked` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = '%s';"""%(member_id, base))
-                base_bal_locked = cur.fetchone()
+                base_bal_locked = float(cur.fetchone()[0])
                 cur.execute("""SELECT `locked` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = '%s';"""%(member_id, coin))
-                coin_bal_locked = cur.fetchone()
+                coin_bal_locked = float(cur.fetchone()[0])
 
                 new_base_bal_locked = base_bal_locked
                 new_coin_bal_locked = coin_bal_locked
@@ -90,13 +90,13 @@ class OrderRouter(Resource):
             coin = market[:3]
 
             cur.execute("""SELECT `balance` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = '%s';"""%(member_id, base))
-            base_bal = cur.fetchone()
+            base_bal = float(cur.fetchone()[0])
             cur.execute("""SELECT `balance` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = '%s';"""%(member_id, coin))
-            coin_bal = cur.fetchone()    
+            coin_bal = float(cur.fetchone()[0]) 
             cur.execute("""SELECT `locked` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = '%s';"""%(member_id, base))
-            base_bal_locked = cur.fetchone()
+            base_bal_locked = float(cur.fetchone()[0])
             cur.execute("""SELECT `locked` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = '%s';"""%(member_id, coin))
-            coin_bal_locked = cur.fetchone()
+            coin_bal_locked = float(cur.fetchone()[0])
             
             new_base_bal = base_bal
             new_coin_bal = coin_bal
@@ -128,7 +128,7 @@ class OrderRouter(Resource):
         print base
         cur.execute("""SELECT `balance` FROM `accounts` WHERE `member_id` = %i AND `currency_id` = '%s';"""%(member_id, base))
 
-        balance = cur.fetchone()
+        balance = float(cur.fetchone()[0])
         print balance
 
         assert type(balance) is float
@@ -169,6 +169,7 @@ class OrderRouter(Resource):
             price = float(request.args.get('price'))
         except:
             print "Price Omitted"
+            price = 0.0
         quantity = float(request.args.get('quantity'))
         member_id = int(request.args.get('member_id'))
 
@@ -189,7 +190,8 @@ class OrderRouter(Resource):
             if side == 'sell':
                 if self.__check_balance(member_id, side, market, market_price, quantity):
                     trade = binance.market_sell(market, quantity)
-
+        
+        if price == 0.0: price = market_price
         self.__order_syncDatabase(member_id, trade, side, order, market, price, quantity)
 
         return trade
