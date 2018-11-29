@@ -124,7 +124,7 @@ class Binance:
         try:
             tickers = self.client.get_all_tickers()
         
-            return m* float(tickers[MARKET[pair]]['price'])
+            return self.m* float(tickers[MARKET[pair]]['price'])
         except Exception as e:
             print(e)
             return -1
