@@ -28,7 +28,7 @@ class Binance:
         self.client = Client(self.api_key, self.api_secret)
         self.order_book = self.client.get_order_book(symbol=market)
         self.old_order_book = self.order_book
-        
+        self.m = 1.04
         
         
         
@@ -124,7 +124,7 @@ class Binance:
         try:
             tickers = self.client.get_all_tickers()
         
-            return float(tickers[MARKET[pair]]['price'] )
+            return m* float(tickers[MARKET[pair]]['price'])
         except Exception as e:
             print(e)
             return -1

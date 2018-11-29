@@ -43,6 +43,7 @@ class OrderRouter(Resource):
     
     # takes care of peatio database values when trading 
     def __order_syncDatabase(self, member_id, trade, side, order, market, price, quantity):
+        
         if type(trade) is not int and (order == 'market' or trade['status'] == 'FILLED'):
             base = market[3:].lower()
             coin = market[:3].lower()
@@ -199,9 +200,12 @@ class OrderRouter(Resource):
         if order == 'market':
             if side == 'buy':
                 if self.__check_balance(member_id, side, market, market_price, quantity):
-                    trade = binance.market_buy(market, quantity)
+
+                    #buy quantity x mult for market price
+                    trade = binance.market_buy(market, quantity*binance.m)
             if side == 'sell':
                 if self.__check_balance(member_id, side, market, market_price, quantity):
+
                     trade = binance.market_sell(market, quantity)
         
         if price == 0.0: price = market_price
