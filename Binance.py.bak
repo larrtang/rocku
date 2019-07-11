@@ -1,0 +1,412 @@
+from exchange import Exchange
+from binance.client import Client
+from binance.websockets import BinanceSocketManager
+
+
+MARKET = {
+'BTCUSDT' : 11,
+'ETHUSDT' : 12,
+'MDABTC' : 48,
+'ZRXBTC' : 25,
+'BCCBTC' : 8
+}
+
+    
+class Binance(Exchange):
+
+    def __init__(self, market='MDABTC'):
+        self.assets = {
+            'btc' : 2,
+            'eth' : 0,
+            'usd' : 10000000000,
+            'xrp' : 10000
+        }
+       
+        self.api_key = 'IUxQsnE724D1R9zKbwGy5YnFQ4uFtGbeHglVyGGv8o25mZA4L5PGpoCCKQJkHHmg'
+        self.api_secret = 'TvaHvvWTxZTzpfDsqDvmEJLf0n3Q5xVjZvxaNReo21qa7y8mIAYjDVmb4ajtCnEZ'
+        self.client = Client(self.api_key, self.api_secret)
+
+
+       
+
+            
+        self.order_book = self.client.get_order_book
+        
+        def websocket_handler(msg):
+            # print("message type: {}".format(msg['e']))
+            # print(msg)
+            print type(msg)    
+
+
+        self.bm = BinanceSocketManager(self.client, user_timeout=60)
+        self.conn_key = self.bm.start_depth_socket(market, websocket_handler)
+        # # then start the socket manager
+        self.bm.start()
+      
+        self.taker_fee = 0.001 * 1
+        # TODO: Get assets manually
+    
+
+    def getMarketDepth(self, sym):
+        try:
+            return self.client.get_order_book(symbol=sym)
+        except:
+            return None
+
+    def getLastTradedPrice(self, pair):
+        try:
+            tickers = self.client.get_all_tickers()
+        
+            return float(tickers[MARKET[pair]]['price'] )
+        except Exception as e:
+            print e
+            return -1
+
+        # if pair == 'BTCUSDT':
+        #     return float(tickers[11]['price'])
+        # elif pair == 'ETHUSDT':
+        #     return float(tickers[12]['price'])
+        # elif pair == 'MDABTC':
+        #     return float(tickers[48]['price'])
+        # elif pair == 'ZRXBTC':
+        #     return float(tickers[25]['price'])
+                
+    def getPortfolioValue(self):
+        return self.assets['btc'], self.assets['xrp']
+        #return float(self.assets['btc'] + self.assets['xrp'] * float(self.client.get_all_tickers()[88]['price']))
+        
+
+    def buy(self, currency, amount):
+        order = self.client.order_market_buy(symbol=currency, quantity=amount)
+        return order
+
+    def sell(self, currency, amount):
+        order = self.client.order_market_sell(symbol=currency, quantity=amount)
+        return order   
+
+    def getBids(self, limit = 10):
+        orders = self.client.get_order_book(symbol='BTCUSDT', limit= limit)
+        return orders['bids']
+        
+    def getAsks(self, limit = 10):
+        orders = self.client.get_order_book(symbol='BTCUSDT', limit= limit)
+        return orders['asks']
+
+
+
+'''
+Binance Ticker Table:
+
+0 {u'symbol': u'ETHBTC', u'price': u'0.03134000'}
+1 {u'symbol': u'LTCBTC', u'price': u'0.00824600'}
+2 {u'symbol': u'BNBBTC', u'price': u'0.00151150'}
+3 {u'symbol': u'NEOBTC', u'price': u'0.00255700'}
+4 {u'symbol': u'QTUMETH', u'price': u'0.01930600'}
+5 {u'symbol': u'EOSETH', u'price': u'0.02634900'}
+6 {u'symbol': u'SNTETH', u'price': u'0.00017597'}
+7 {u'symbol': u'BNTETH', u'price': u'0.00624900'}
+8 {u'symbol': u'BCCBTC', u'price': u'0.06860400'}
+9 {u'symbol': u'GASBTC', u'price': u'0.00079200'}
+10 {u'symbol': u'BNBETH', u'price': u'0.04830800'}
+11 {u'symbol': u'BTCUSDT', u'price': u'6558.36000000'}
+12 {u'symbol': u'ETHUSDT', u'price': u'205.48000000'}
+13 {u'symbol': u'OAXETH', u'price': u'0.00120560'}
+14 {u'symbol': u'DNTETH', u'price': u'0.00012860'}
+15 {u'symbol': u'MCOETH', u'price': u'0.02172800'}
+16 {u'symbol': u'MCOBTC', u'price': u'0.00068300'}
+17 {u'symbol': u'WTCBTC', u'price': u'0.00045590'}
+18 {u'symbol': u'WTCETH', u'price': u'0.01454600'}
+19 {u'symbol': u'LRCBTC', u'price': u'0.00001695'}
+20 {u'symbol': u'LRCETH', u'price': u'0.00054092'}
+21 {u'symbol': u'QTUMBTC', u'price': u'0.00060400'}
+22 {u'symbol': u'YOYOBTC', u'price': u'0.00000460'}
+23 {u'symbol': u'OMGBTC', u'price': u'0.00051000'}
+24 {u'symbol': u'OMGETH', u'price': u'0.01630500'}
+25 {u'symbol': u'ZRXBTC', u'price': u'0.00014220'}
+26 {u'symbol': u'ZRXETH', u'price': u'0.00453300'}
+27 {u'symbol': u'STRATBTC', u'price': u'0.00021460'}
+28 {u'symbol': u'STRATETH', u'price': u'0.00681800'}
+29 {u'symbol': u'SNGLSBTC', u'price': u'0.00000396'}
+30 {u'symbol': u'SNGLSETH', u'price': u'0.00012735'}
+31 {u'symbol': u'BQXBTC', u'price': u'0.00006054'}
+32 {u'symbol': u'BQXETH', u'price': u'0.00192950'}
+33 {u'symbol': u'KNCBTC', u'price': u'0.00006375'}
+34 {u'symbol': u'KNCETH', u'price': u'0.00203590'}
+35 {u'symbol': u'FUNBTC', u'price': u'0.00000228'}
+36 {u'symbol': u'FUNETH', u'price': u'0.00007294'}
+37 {u'symbol': u'SNMBTC', u'price': u'0.00000842'}
+38 {u'symbol': u'SNMETH', u'price': u'0.00026855'}
+39 {u'symbol': u'NEOETH', u'price': u'0.08173000'}
+40 {u'symbol': u'IOTABTC', u'price': u'0.00007525'}
+41 {u'symbol': u'IOTAETH', u'price': u'0.00240149'}
+42 {u'symbol': u'LINKBTC', u'price': u'0.00005607'}
+43 {u'symbol': u'LINKETH', u'price': u'0.00178825'}
+44 {u'symbol': u'XVGBTC', u'price': u'0.00000220'}
+45 {u'symbol': u'XVGETH', u'price': u'0.00007050'}
+46 {u'symbol': u'SALTBTC', u'price': u'0.00009190'}
+47 {u'symbol': u'SALTETH', u'price': u'0.00294800'}
+48 {u'symbol': u'MDABTC', u'price': u'0.00030000'}
+49 {u'symbol': u'MDAETH', u'price': u'0.00958660'}
+50 {u'symbol': u'MTLBTC', u'price': u'0.00010700'}
+51 {u'symbol': u'MTLETH', u'price': u'0.00343700'}
+52 {u'symbol': u'SUBBTC', u'price': u'0.00001713'}
+53 {u'symbol': u'SUBETH', u'price': u'0.00054137'}
+54 {u'symbol': u'EOSBTC', u'price': u'0.00082530'}
+55 {u'symbol': u'SNTBTC', u'price': u'0.00000547'}
+56 {u'symbol': u'ETCETH', u'price': u'0.04753200'}
+57 {u'symbol': u'ETCBTC', u'price': u'0.00149000'}
+58 {u'symbol': u'MTHBTC', u'price': u'0.00000558'}
+59 {u'symbol': u'MTHETH', u'price': u'0.00017723'}
+60 {u'symbol': u'ENGBTC', u'price': u'0.00009127'}
+61 {u'symbol': u'ENGETH', u'price': u'0.00290400'}
+62 {u'symbol': u'DNTBTC', u'price': u'0.00000403'}
+63 {u'symbol': u'ZECBTC', u'price': u'0.01865100'}
+64 {u'symbol': u'ZECETH', u'price': u'0.59449000'}
+65 {u'symbol': u'BNTBTC', u'price': u'0.00019520'}
+66 {u'symbol': u'ASTBTC', u'price': u'0.00001405'}
+67 {u'symbol': u'ASTETH', u'price': u'0.00045050'}
+68 {u'symbol': u'DASHBTC', u'price': u'0.02378100'}
+69 {u'symbol': u'DASHETH', u'price': u'0.75710000'}
+70 {u'symbol': u'OAXBTC', u'price': u'0.00003782'}
+71 {u'symbol': u'BTGBTC', u'price': u'0.00402100'}
+72 {u'symbol': u'BTGETH', u'price': u'0.12790000'}
+73 {u'symbol': u'EVXBTC', u'price': u'0.00008374'}
+74 {u'symbol': u'EVXETH', u'price': u'0.00266920'}
+75 {u'symbol': u'REQBTC', u'price': u'0.00001015'}
+76 {u'symbol': u'REQETH', u'price': u'0.00032230'}
+77 {u'symbol': u'VIBBTC', u'price': u'0.00000709'}
+78 {u'symbol': u'VIBETH', u'price': u'0.00022640'}
+79 {u'symbol': u'TRXBTC', u'price': u'0.00000373'}
+80 {u'symbol': u'TRXETH', u'price': u'0.00011918'}
+81 {u'symbol': u'POWRBTC', u'price': u'0.00002751'}
+82 {u'symbol': u'POWRETH', u'price': u'0.00088298'}
+83 {u'symbol': u'ARKBTC', u'price': u'0.00011580'}
+84 {u'symbol': u'ARKETH', u'price': u'0.00368800'}
+85 {u'symbol': u'YOYOETH', u'price': u'0.00014639'}
+86 {u'symbol': u'XRPBTC', u'price': u'0.00007059'}
+87 {u'symbol': u'XRPETH', u'price': u'0.00225278'}
+88 {u'symbol': u'MODBTC', u'price': u'0.00015280'}
+89 {u'symbol': u'MODETH', u'price': u'0.00485200'}
+90 {u'symbol': u'ENJBTC', u'price': u'0.00000753'}
+91 {u'symbol': u'ENJETH', u'price': u'0.00023968'}
+92 {u'symbol': u'STORJBTC', u'price': u'0.00005120'}
+93 {u'symbol': u'STORJETH', u'price': u'0.00163290'}
+94 {u'symbol': u'BNBUSDT', u'price': u'9.92400000'}
+95 {u'symbol': u'YOYOBNB', u'price': u'0.00306200'}
+96 {u'symbol': u'POWRBNB', u'price': u'0.01807000'}
+97 {u'symbol': u'KMDBTC', u'price': u'0.00019700'}
+98 {u'symbol': u'KMDETH', u'price': u'0.00631300'}
+99 {u'symbol': u'NULSBNB', u'price': u'0.11691000'}
+100 {u'symbol': u'RCNBTC', u'price': u'0.00000434'}
+101 {u'symbol': u'RCNETH', u'price': u'0.00013791'}
+102 {u'symbol': u'RCNBNB', u'price': u'0.00290300'}
+103 {u'symbol': u'NULSBTC', u'price': u'0.00017520'}
+104 {u'symbol': u'NULSETH', u'price': u'0.00564056'}
+105 {u'symbol': u'RDNBTC', u'price': u'0.00008499'}
+106 {u'symbol': u'RDNETH', u'price': u'0.00271510'}
+107 {u'symbol': u'RDNBNB', u'price': u'0.05636000'}
+108 {u'symbol': u'XMRBTC', u'price': u'0.01610600'}
+109 {u'symbol': u'XMRETH', u'price': u'0.51411000'}
+110 {u'symbol': u'DLTBNB', u'price': u'0.00951000'}
+111 {u'symbol': u'WTCBNB', u'price': u'0.30350000'}
+112 {u'symbol': u'DLTBTC', u'price': u'0.00001426'}
+113 {u'symbol': u'DLTETH', u'price': u'0.00045395'}
+114 {u'symbol': u'AMBBTC', u'price': u'0.00002952'}
+115 {u'symbol': u'AMBETH', u'price': u'0.00094492'}
+116 {u'symbol': u'AMBBNB', u'price': u'0.01939000'}
+117 {u'symbol': u'BCCETH', u'price': u'2.19025000'}
+118 {u'symbol': u'BCCUSDT', u'price': u'450.05000000'}
+119 {u'symbol': u'BCCBNB', u'price': u'45.33000000'}
+120 {u'symbol': u'BATBTC', u'price': u'0.00003635'}
+121 {u'symbol': u'BATETH', u'price': u'0.00115559'}
+122 {u'symbol': u'BATBNB', u'price': u'0.02399000'}
+123 {u'symbol': u'BCPTBTC', u'price': u'0.00001610'}
+124 {u'symbol': u'BCPTETH', u'price': u'0.00051640'}
+125 {u'symbol': u'BCPTBNB', u'price': u'0.01071000'}
+126 {u'symbol': u'ARNBTC', u'price': u'0.00011198'}
+127 {u'symbol': u'ARNETH', u'price': u'0.00357550'}
+128 {u'symbol': u'GVTBTC', u'price': u'0.00216390'}
+129 {u'symbol': u'GVTETH', u'price': u'0.06908900'}
+130 {u'symbol': u'CDTBTC', u'price': u'0.00000248'}
+131 {u'symbol': u'CDTETH', u'price': u'0.00007944'}
+132 {u'symbol': u'GXSBTC', u'price': u'0.00021400'}
+133 {u'symbol': u'GXSETH', u'price': u'0.00685400'}
+134 {u'symbol': u'NEOUSDT', u'price': u'16.76700000'}
+135 {u'symbol': u'NEOBNB', u'price': u'1.68300000'}
+136 {u'symbol': u'POEBTC', u'price': u'0.00000180'}
+137 {u'symbol': u'POEETH', u'price': u'0.00005729'}
+138 {u'symbol': u'QSPBTC', u'price': u'0.00000647'}
+139 {u'symbol': u'QSPETH', u'price': u'0.00020635'}
+140 {u'symbol': u'QSPBNB', u'price': u'0.00428300'}
+141 {u'symbol': u'BTSBTC', u'price': u'0.00001512'}
+142 {u'symbol': u'BTSETH', u'price': u'0.00048585'}
+143 {u'symbol': u'BTSBNB', u'price': u'0.01010000'}
+144 {u'symbol': u'XZCBTC', u'price': u'0.00146500'}
+145 {u'symbol': u'XZCETH', u'price': u'0.04688300'}
+146 {u'symbol': u'XZCBNB', u'price': u'0.97300000'}
+147 {u'symbol': u'LSKBTC', u'price': u'0.00043750'}
+148 {u'symbol': u'LSKETH', u'price': u'0.01387900'}
+149 {u'symbol': u'LSKBNB', u'price': u'0.28900000'}
+150 {u'symbol': u'TNTBTC', u'price': u'0.00000471'}
+151 {u'symbol': u'TNTETH', u'price': u'0.00014916'}
+152 {u'symbol': u'FUELBTC', u'price': u'0.00000308'}
+153 {u'symbol': u'FUELETH', u'price': u'0.00009750'}
+154 {u'symbol': u'MANABTC', u'price': u'0.00001065'}
+155 {u'symbol': u'MANAETH', u'price': u'0.00034149'}
+156 {u'symbol': u'BCDBTC', u'price': u'0.00026500'}
+157 {u'symbol': u'BCDETH', u'price': u'0.00840000'}
+158 {u'symbol': u'DGDBTC', u'price': u'0.00673700'}
+159 {u'symbol': u'DGDETH', u'price': u'0.21367000'}
+160 {u'symbol': u'IOTABNB', u'price': u'0.04997000'}
+161 {u'symbol': u'ADXBTC', u'price': u'0.00003360'}
+162 {u'symbol': u'ADXETH', u'price': u'0.00106800'}
+163 {u'symbol': u'ADXBNB', u'price': u'0.02216000'}
+164 {u'symbol': u'ADABTC', u'price': u'0.00001177'}
+165 {u'symbol': u'ADAETH', u'price': u'0.00037578'}
+166 {u'symbol': u'PPTBTC', u'price': u'0.00052780'}
+167 {u'symbol': u'PPTETH', u'price': u'0.01680200'}
+168 {u'symbol': u'CMTBTC', u'price': u'0.00001727'}
+169 {u'symbol': u'CMTETH', u'price': u'0.00055240'}
+170 {u'symbol': u'CMTBNB', u'price': u'0.01137000'}
+171 {u'symbol': u'XLMBTC', u'price': u'0.00003781'}
+172 {u'symbol': u'XLMETH', u'price': u'0.00120750'}
+173 {u'symbol': u'XLMBNB', u'price': u'0.02508000'}
+174 {u'symbol': u'CNDBTC', u'price': u'0.00000387'}
+175 {u'symbol': u'CNDETH', u'price': u'0.00012308'}
+176 {u'symbol': u'CNDBNB', u'price': u'0.00256900'}
+177 {u'symbol': u'LENDBTC', u'price': u'0.00000312'}
+178 {u'symbol': u'LENDETH', u'price': u'0.00010009'}
+179 {u'symbol': u'WABIBTC', u'price': u'0.00003898'}
+180 {u'symbol': u'WABIETH', u'price': u'0.00124805'}
+181 {u'symbol': u'WABIBNB', u'price': u'0.02585000'}
+182 {u'symbol': u'LTCETH', u'price': u'0.26282000'}
+183 {u'symbol': u'LTCUSDT', u'price': u'54.08000000'}
+184 {u'symbol': u'LTCBNB', u'price': u'5.45000000'}
+185 {u'symbol': u'TNBBTC', u'price': u'0.00000157'}
+186 {u'symbol': u'TNBETH', u'price': u'0.00005005'}
+187 {u'symbol': u'WAVESBTC', u'price': u'0.00030070'}
+188 {u'symbol': u'WAVESETH', u'price': u'0.00960100'}
+189 {u'symbol': u'WAVESBNB', u'price': u'0.20150000'}
+190 {u'symbol': u'GTOBTC', u'price': u'0.00001100'}
+191 {u'symbol': u'GTOETH', u'price': u'0.00035064'}
+192 {u'symbol': u'GTOBNB', u'price': u'0.00724000'}
+193 {u'symbol': u'ICXBTC', u'price': u'0.00010900'}
+194 {u'symbol': u'ICXETH', u'price': u'0.00347500'}
+195 {u'symbol': u'ICXBNB', u'price': u'0.07237000'}
+196 {u'symbol': u'OSTBTC', u'price': u'0.00000708'}
+197 {u'symbol': u'OSTETH', u'price': u'0.00022623'}
+198 {u'symbol': u'OSTBNB', u'price': u'0.00463300'}
+199 {u'symbol': u'ELFBTC', u'price': u'0.00005303'}
+200 {u'symbol': u'ELFETH', u'price': u'0.00168679'}
+201 {u'symbol': u'AIONBTC', u'price': u'0.00006500'}
+202 {u'symbol': u'AIONETH', u'price': u'0.00206900'}
+203 {u'symbol': u'AIONBNB', u'price': u'0.04322000'}
+204 {u'symbol': u'NEBLBTC', u'price': u'0.00029960'}
+205 {u'symbol': u'NEBLETH', u'price': u'0.00959700'}
+206 {u'symbol': u'NEBLBNB', u'price': u'0.20172000'}
+207 {u'symbol': u'BRDBTC', u'price': u'0.00005755'}
+208 {u'symbol': u'BRDETH', u'price': u'0.00184240'}
+209 {u'symbol': u'BRDBNB', u'price': u'0.03824000'}
+210 {u'symbol': u'MCOBNB', u'price': u'0.45519000'}
+211 {u'symbol': u'EDOBTC', u'price': u'0.00017530'}
+212 {u'symbol': u'EDOETH', u'price': u'0.00563800'}
+213 {u'symbol': u'WINGSBTC', u'price': u'0.00002519'}
+214 {u'symbol': u'WINGSETH', u'price': u'0.00080480'}
+215 {u'symbol': u'NAVBTC', u'price': u'0.00005240'}
+216 {u'symbol': u'NAVETH', u'price': u'0.00169400'}
+217 {u'symbol': u'NAVBNB', u'price': u'0.03502000'}
+218 {u'symbol': u'LUNBTC', u'price': u'0.00067270'}
+219 {u'symbol': u'LUNETH', u'price': u'0.02126900'}
+220 {u'symbol': u'APPCBTC', u'price': u'0.00001583'}
+221 {u'symbol': u'APPCETH', u'price': u'0.00050830'}
+222 {u'symbol': u'APPCBNB', u'price': u'0.01052000'}
+223 {u'symbol': u'VIBEBTC', u'price': u'0.00001097'}
+224 {u'symbol': u'VIBEETH', u'price': u'0.00035110'}
+225 {u'symbol': u'RLCBTC', u'price': u'0.00006750'}
+226 {u'symbol': u'RLCETH', u'price': u'0.00215500'}
+227 {u'symbol': u'RLCBNB', u'price': u'0.04449000'}
+228 {u'symbol': u'INSBTC', u'price': u'0.00007740'}
+229 {u'symbol': u'INSETH', u'price': u'0.00247700'}
+230 {u'symbol': u'PIVXBTC', u'price': u'0.00020470'}
+231 {u'symbol': u'PIVXETH', u'price': u'0.00653100'}
+232 {u'symbol': u'PIVXBNB', u'price': u'0.13520000'}
+233 {u'symbol': u'IOSTBTC', u'price': u'0.00000185'}
+234 {u'symbol': u'IOSTETH', u'price': u'0.00005898'}
+235 {u'symbol': u'STEEMBTC', u'price': u'0.00012310'}
+236 {u'symbol': u'STEEMETH', u'price': u'0.00392600'}
+237 {u'symbol': u'STEEMBNB', u'price': u'0.08140000'}
+238 {u'symbol': u'NANOBTC', u'price': u'0.00031350'}
+239 {u'symbol': u'NANOETH', u'price': u'0.00999700'}
+240 {u'symbol': u'NANOBNB', u'price': u'0.20850000'}
+241 {u'symbol': u'VIABTC', u'price': u'0.00010140'}
+242 {u'symbol': u'VIAETH', u'price': u'0.00326300'}
+243 {u'symbol': u'VIABNB', u'price': u'0.06726000'}
+244 {u'symbol': u'BLZBTC', u'price': u'0.00002001'}
+245 {u'symbol': u'BLZETH', u'price': u'0.00064060'}
+246 {u'symbol': u'BLZBNB', u'price': u'0.01329000'}
+247 {u'symbol': u'AEBTC', u'price': u'0.00020330'}
+248 {u'symbol': u'AEETH', u'price': u'0.00648000'}
+249 {u'symbol': u'AEBNB', u'price': u'0.13375000'}
+250 {u'symbol': u'NCASHBTC', u'price': u'0.00000075'}
+251 {u'symbol': u'NCASHETH', u'price': u'0.00002395'}
+252 {u'symbol': u'NCASHBNB', u'price': u'0.00050000'}
+253 {u'symbol': u'POABTC', u'price': u'0.00001623'}
+254 {u'symbol': u'POAETH', u'price': u'0.00051600'}
+255 {u'symbol': u'POABNB', u'price': u'0.01068000'}
+256 {u'symbol': u'ZILBTC', u'price': u'0.00000528'}
+257 {u'symbol': u'ZILETH', u'price': u'0.00016801'}
+258 {u'symbol': u'ZILBNB', u'price': u'0.00345900'}
+259 {u'symbol': u'ONTBTC', u'price': u'0.00028170'}
+260 {u'symbol': u'ONTETH', u'price': u'0.00897900'}
+261 {u'symbol': u'ONTBNB', u'price': u'0.18574000'}
+262 {u'symbol': u'STORMBTC', u'price': u'0.00000119'}
+263 {u'symbol': u'STORMETH', u'price': u'0.00003790'}
+264 {u'symbol': u'STORMBNB', u'price': u'0.00077600'}
+265 {u'symbol': u'QTUMBNB', u'price': u'0.39789000'}
+266 {u'symbol': u'QTUMUSDT', u'price': u'3.95400000'}
+267 {u'symbol': u'XEMBTC', u'price': u'0.00001457'}
+268 {u'symbol': u'XEMETH', u'price': u'0.00046662'}
+269 {u'symbol': u'XEMBNB', u'price': u'0.00969000'}
+270 {u'symbol': u'WANBTC', u'price': u'0.00015510'}
+271 {u'symbol': u'WANETH', u'price': u'0.00495000'}
+272 {u'symbol': u'WANBNB', u'price': u'0.10230000'}
+273 {u'symbol': u'WPRBTC', u'price': u'0.00000463'}
+274 {u'symbol': u'WPRETH', u'price': u'0.00014796'}
+275 {u'symbol': u'QLCBTC', u'price': u'0.00000768'}
+276 {u'symbol': u'QLCETH', u'price': u'0.00024648'}
+277 {u'symbol': u'SYSBTC', u'price': u'0.00001461'}
+278 {u'symbol': u'SYSETH', u'price': u'0.00047059'}
+279 {u'symbol': u'SYSBNB', u'price': u'0.00977000'}
+280 {u'symbol': u'QLCBNB', u'price': u'0.00512400'}
+281 {u'symbol': u'GRSBTC', u'price': u'0.00008399'}
+282 {u'symbol': u'GRSETH', u'price': u'0.00269289'}
+283 {u'symbol': u'ADAUSDT', u'price': u'0.07723000'}
+284 {u'symbol': u'ADABNB', u'price': u'0.00779000'}
+285 {u'symbol': u'CLOAKBTC', u'price': u'0.00038100'}
+286 {u'symbol': u'CLOAKETH', u'price': u'0.01213400'}
+287 {u'symbol': u'GNTBTC', u'price': u'0.00002363'}
+288 {u'symbol': u'GNTETH', u'price': u'0.00075405'}
+289 {u'symbol': u'GNTBNB', u'price': u'0.01572000'}
+290 {u'symbol': u'LOOMBTC', u'price': u'0.00001843'}
+291 {u'symbol': u'LOOMETH', u'price': u'0.00058892'}
+292 {u'symbol': u'LOOMBNB', u'price': u'0.01221000'}
+293 {u'symbol': u'XRPUSDT', u'price': u'0.46295000'}
+294 {u'symbol': u'REPBTC', u'price': u'0.00192000'}
+295 {u'symbol': u'REPETH', u'price': u'0.06127000'}
+296 {u'symbol': u'REPBNB', u'price': u'1.28400000'}
+297 {u'symbol': u'TUSDBTC', u'price': u'0.00015652'}
+298 {u'symbol': u'TUSDETH', u'price': u'0.00500718'}
+299 {u'symbol': u'TUSDBNB', u'price': u'0.10380000'}
+300 {u'symbol': u'ZENBTC', u'price': u'0.00205700'}
+301 {u'symbol': u'ZENETH', u'price': u'0.06573000'}
+302 {u'symbol': u'ZENBNB', u'price': u'1.36000000'}
+303 {u'symbol': u'SKYBTC', u'price': u'0.00054200'}
+304 {u'symbol': u'SKYETH', u'price': u'0.01725000'}
+305 {u'symbol': u'SKYBNB', u'price': u'0.35700000'}
+306 {u'symbol': u'EOSUSDT', u'price': u'5.41110000'}
+307 {u'symbol': u'EOSBNB', u'price': u'0.54450000'}
+308 {u'symbol': u'CVCBTC', u'price': u'0.00002089'}
+309 {u'symbol': u'CVCETH', u'price': u'0.00066705'}
+
+
+'''

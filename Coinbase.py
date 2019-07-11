@@ -1,17 +1,22 @@
 from exchange import Exchange
 from coinbase.wallet.client import Client
-from time import sleep
+import cbpro
 
 class Coinbase(Exchange):
     API_ENDPT = 'https://api.pro.coinbase.com/'
 
     def __init__(self):
-        super().__init__()
+        self.assets = {
+            'btc' : 400,
+            'eth' : 0,
+            'usd' : 10000000000
+        }
         self.api_key = ''
         self.api_secret = ''
         self.client = Client(self.api_key, self.api_secret)
-        self.fee_rate = 0.0149
+        self.account_id = ''
 
+        self.taker_fee = 0.003 
     def getLastTradedPrice(self, pair):
         return float(self.client.get_spot_price(currency_pair = pair)['amount'])   
 
@@ -25,20 +30,19 @@ class Coinbase(Exchange):
             if k == 'usd':
                 value += v
 
-        return value
+        # return value
+        return self.assets['usd']
 
-    def pretend_buy_BTC(self):         
-        btc_usd = self.getLastTradedPrice('BTC-USD')
-        btc_amount = (self.position_sizes['usd'] * (1-self.fee_rate)) / btc_usd
+    def buy(self, currency, amount):
+        order = self.client.buy(self.account_id, amount=amount, currency=currency)
+        order.commit()
+        return order 
+
+    def sell(self, currency, amount):
+        order = self.client.sell(self.account_id, amount=amount, currency=currency)
+        order.commit()
+        return order
+
+   
         
-        self.assets['btc'] += btc_amount
-        self.assets['usd'] -= self.position_sizes['usd']
     
-
-    def pretend_sell_BTC(self):         
-        btc_usd = self.getLastTradedPrice('BTC-USD')
-        btc_amount = (self.position_sizes['usd'] * (1-self.fee_rate)) / btc_usd
-        
-        self.assets['btc'] -= btc_amount
-        self.assets['usd'] += self.position_sizes['usd']
-

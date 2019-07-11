@@ -1,9 +1,9 @@
-from exchange import Exchange
 from binance.client import Client
 from binance.websockets import BinanceSocketManager
 
 
 MARKET = {
+'ETHBTC' : 0,
 'BTCUSDT' : 11,
 'ETHUSDT' : 12,
 'MDABTC' : 48,
@@ -19,22 +19,16 @@ MARKET = {
 }
 
 
-class Binance(Exchange):
+class Binance:
 
     def __init__(self, market='MDABTC'):
-        self.assets = {
-            'btc' : 2,
-            'eth' : 0,
-            'usd' : 10000000000,
-            'xrp' : 10000
-        }
        
         self.api_key = ''
         self.api_secret = ''
         self.client = Client(self.api_key, self.api_secret)
         self.order_book = self.client.get_order_book(symbol=market)
         self.old_order_book = self.order_book
-        
+        self.m = 1.04
         
         
         
@@ -130,7 +124,7 @@ class Binance(Exchange):
         try:
             tickers = self.client.get_all_tickers()
         
-            return float(tickers[MARKET[pair]]['price'] )
+            return self.m* float(tickers[MARKET[pair]]['price'])
         except Exception as e:
             print(e)
             return -1
@@ -182,9 +176,20 @@ class Binance(Exchange):
     def getAsks(self, limit = 10):
         orders = self.client.get_order_book(symbol='BTCUSDT', limit= limit)
         return orders['asks']
+    
 
+    def getOrderStatus(self, sym, orderID):
+        return self.client.get_order(symbol=sym, orderId=orderID)
 
+    def allOrdersFilled(self, sym):
+        orders = self.client.get_open_orders(symbol=sym)
+        return order is None or len(orders) == 0 
+    
 
+    def cancelOrder(self, sym, orderID):
+        result = client.cancel_order(symbol=sym, orderId=orderID)
+        return result
+    
 '''
 Binance Ticker Table:
 
