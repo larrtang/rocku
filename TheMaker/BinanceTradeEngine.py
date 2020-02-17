@@ -19,6 +19,8 @@ class BinanceTradeEngine:
         self.socketManager = BinanceSocketManager(self.client, user_timeout=60)
         self.book_diff = self.socketManager.start_depth_socket(market, self.depthUpdateHandler)
         self.trade_stream = self.socketManager.start_trade_socket(market, self.tradeUpdateHandler)
+
+    def start(self):
         self.socketManager.start()
 
     def __process_initial_book_state(self):
@@ -66,4 +68,5 @@ class BinanceTradeEngine:
 
 if __name__ == "__main__":
     engine = BinanceTradeEngine()
+    engine.start()
 

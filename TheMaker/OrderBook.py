@@ -13,6 +13,12 @@ class Order:
         self.position_quantity = pos_quantity
         self.side = side
 
+    def getTotal(self):
+        return self.price * self.quantity
+
+    def getPositionTotal(self):
+        return self.price * self.position_quantity
+
     def __repr__(self):
         return str(self.price) + " " + str(self.quantity) + " " + \
                str(self.position_quantity) + " " + str(self.side)
@@ -22,7 +28,7 @@ class Order:
                str(self.position_quantity)+"\t"+str(self.side)
 
 class OrderBookSide:
-    def __init__(self, side='b', depth=50):
+    def __init__(self, side='b', depth=30):
         self.side = side
         self.sortedOrderList = []
         self.depth = depth
@@ -46,8 +52,8 @@ class OrderBookSide:
         self.lock.release()
 
     def __add_modify_delete_bid(self, order: Order, my_order):
-        for i in range(len(self.sortedOrderList)):
-            if order.quantity != 0:
+        if order.quantity > 0:
+            for i in range(len(self.sortedOrderList)):
                 [p,q] = [self.sortedOrderList[i].price, self.sortedOrderList[i].quantity]
                 if order.price > p:
                     self.sortedOrderList.insert(i, order)
@@ -55,21 +61,24 @@ class OrderBookSide:
                 elif order.price == p:
                     if not my_order:
                         self.sortedOrderList[i].quantity = order.quantity
+                        self.sortedOrderList[i].position_quantity = order.position_quantity
                         if order.quantity == 0:
                             #print('deleting '+ str(order))
                             # del self.sortedOrderList[i]
                             self.sortedOrderList.pop(i)
+                    else: #is my_order
+                        # going to be modify
+                        self.sortedOrderList[i].position_quantity += order.position_quantity
                     break
                 elif i == len(self.sortedOrderList) - 1:
                     #print('new BID order at end of book')
                     self.sortedOrderList.append(order)
-
-            if i >= self.depth:
-                break
+                if i >= self.depth:
+                    break
 
     def __add_modify_delete_ask(self, order: Order, my_order):
-        for i in range(len(self.sortedOrderList)):
-            if order.quantity != 0:
+        if order.quantity > 0:
+            for i in range(len(self.sortedOrderList)):
                 [p, q] = [self.sortedOrderList[i].price, self.sortedOrderList[i].quantity]
                 if order.price < p:
                     self.sortedOrderList.insert(i, order)
@@ -77,16 +86,21 @@ class OrderBookSide:
                 elif order.price == p:
                     if not my_order:
                         self.sortedOrderList[i].quantity = order.quantity
+                        self.sortedOrderList[i].position_quantity = order.position_quantity
                         if order.quantity == 0:
                             # del self.sortedOrderList[i]
                             self.sortedOrderList.pop(i)
+                    else: #is my_order
+                        # going to be modify
+                        self.sortedOrderList[i].position_quantity += order.position_quantity
                     break
                 elif i == len(self.sortedOrderList) - 1:
                     #print('new BID order at end of book')
                     self.sortedOrderList.append(order)
+                if i >= self.depth:
+                    break
 
-
-    def update_delete(self, order : Order):
+    def update_delete(self, order: Order):
         traded_order = None
         self.lock.acquire()
         for i in range(len(self.sortedOrderList)):
@@ -99,11 +113,12 @@ class OrderBookSide:
 
 
 class OrderBook:
-    def __init__(self, market, display_depth=30):
+    def __init__(self, market, depth=30, display_depth=30):
         self.market = market
-        self.bids = OrderBookSide(side=BID)
-        self.asks = OrderBookSide(side=ASK)
+        self.bids = OrderBookSide(side=BID, depth=depth)
+        self.asks = OrderBookSide(side=ASK, depth=depth)
         self.display_depth = display_depth
+        self.depth = depth
         self.msg = {}
 
 
@@ -115,7 +130,7 @@ class OrderBook:
             self.asks.add_modify_delete(order, my_order=my_order)
 
     def update_delete(self, order : Order, side):
-        traded_orders =[]
+        traded_orders = []
         order.side = side
         while len(self.bids) > 0 and self.bids.sortedOrderList[0].price > order.price:
             traded_orders.append(self.bids.sortedOrderList.pop(0))
@@ -169,14 +184,21 @@ class OrderBook:
 
         return str(ret)
 
-    def __str__(self):
-        #self.health_check()
-        self.mid = None
+    def getMidPrice(self) -> float:
         if len(self.bids) > 0 and len(self.asks) > 0:
             self.mid = self.bids.sortedOrderList[0].price + self.asks.sortedOrderList[0].price
             self.mid /= 2
+        return self.mid
 
-        ret = "Mid\t\t= "+str(self.mid)+"\nSpread\t\t= "+self.getSpread()+"\n" \
+
+    def __str__(self):
+        #self.health_check()
+        self.mid_str = None
+        if len(self.bids) > 0 and len(self.asks) > 0:
+            self.mid_str = self.bids.sortedOrderList[0].price + self.asks.sortedOrderList[0].price
+            self.mid_str /= 2
+
+        ret = "Mid\t\t= " + str(self.mid_str) + "\nSpread\t\t= " + self.getSpread() + "\n" \
               "________________________________________________________________\n"
         ret += "\t\tBID\t\t|\t\tASK\t\t\n"
         for i in range(max(len(self.bids), len(self.asks))):
