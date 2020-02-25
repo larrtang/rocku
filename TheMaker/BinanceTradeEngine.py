@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 from binance.client import Client
 from binance.websockets import BinanceSocketManager
 import os
@@ -7,6 +9,9 @@ import traceback
 from OrderBook import OrderBook, Order
 from MarketState import MarketState
 from TestTrader import TestTrader
+
+# import Playbook
+
 
 class BinanceTradeEngine:
     def __init__(self, market='BTCUSDT'):
@@ -19,6 +24,9 @@ class BinanceTradeEngine:
         self.socketManager = BinanceSocketManager(self.client, user_timeout=60)
         self.book_diff = self.socketManager.start_depth_socket(market, self.depthUpdateHandler)
         self.trade_stream = self.socketManager.start_trade_socket(market, self.tradeUpdateHandler)
+        self.PRINT_BOOK = True
+
+        self.tradingOn = True
 
     def start(self):
         self.socketManager.start()
@@ -43,22 +51,27 @@ class BinanceTradeEngine:
         try:
             self.order_book.binance_incremental_book_update_handler(msg)
 
-            print(self.market_state)
+            if self.PRINT_BOOK:
+                print(self.market_state)
         except Exception as e:
             print(e)
             print(e.args)
+            print("LAST TRADE: "+str(self.market_state.last_trade))
             self.socketManager.close()
             traceback.print_exc()
     done = False
+
     def tradeUpdateHandler(self, msg):
         try:
+
             self.market_state.binance_incremental_trade_update_handler(msg)
             self.market_state.setLastTrade(msg)
-
-            if not self.done:
+            if self.tradingOn:
                 self.trader.on_trade_event(self.market_state)
-                #self.done = True
-            print(self.market_state)
+
+            #self.done = True
+            if self.PRINT_BOOK and False:
+                print(self.market_state)
         except Exception as e:
             print(e)
             print(e.args)
