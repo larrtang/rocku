@@ -1,5 +1,5 @@
 import threading
-import sys
+import logging
 
 BID = 'b'
 ASK = 'a'
@@ -24,7 +24,7 @@ class Order:
                str(self.position_quantity) + " " + str(self.side)
 
     def __str__(self):
-        return "["+str(self.price)+"] ["+str(self.quantity)+"] ["+\
+        return "[{:5.4f}".format(self.price)+"] ["+str(self.quantity)+"] ["+\
                str(self.position_quantity)+"] ["+str(self.side)+"]"
 
 class OrderBookSide:
@@ -32,7 +32,7 @@ class OrderBookSide:
         self.side = side
         self.sortedOrderList = []
         self.depth = depth
-        self.lock = lock
+        self._lock = lock
 
     def __len__(self):
         return len(self.sortedOrderList)
@@ -41,7 +41,7 @@ class OrderBookSide:
     def add_modify_delete(self, order : Order, my_order):
        # if not my_order and order.quantity == 0.0 and order.position_quantity == 0.0:
         #    print("order cancel coming in:", order)
-        self.lock.acquire()
+        self._lock.acquire()
         if len(self.sortedOrderList) == 0:
             self.sortedOrderList.append(order)
         else:
@@ -51,7 +51,7 @@ class OrderBookSide:
                 self.__add_modify_delete_ask(order, my_order)
         if len(self.sortedOrderList) > self.depth:
             self.sortedOrderList = self.sortedOrderList[:self.depth]
-        self.lock.release()
+        self._lock.release()
 
     def __add_modify_delete_bid(self, order: Order, my_order):
         if order.quantity > 0:
@@ -66,6 +66,7 @@ class OrderBookSide:
                         self.sortedOrderList[i].position_quantity = order.position_quantity
                     else:  # is my_order
                         # going to be modify
+                        self.sortedOrderList[i].quantity += order.quantity
                         self.sortedOrderList[i].position_quantity += order.position_quantity
                     break
                 elif i == len(self.sortedOrderList) - 1:
@@ -81,9 +82,9 @@ class OrderBookSide:
                     self.sortedOrderList.pop(j)
                     break
         elif order.quantity == 0.0:
-            self.lock.release()
+            self._lock.release()
             self.update_delete(order)
-            self.lock.acquire()
+            self._lock.acquire()
 
 
 
@@ -100,6 +101,7 @@ class OrderBookSide:
                         self.sortedOrderList[i].position_quantity = order.position_quantity
                     else:  # is my_order
                         # going to be modify
+                        self.sortedOrderList[i].quantity += order.quantity
                         self.sortedOrderList[i].position_quantity += order.position_quantity
                     break
                 elif i == len(self.sortedOrderList) - 1:
@@ -115,13 +117,13 @@ class OrderBookSide:
                     self.sortedOrderList.pop(j)
                     break
         elif order.quantity == 0.0:
-            self.lock.release()
+            self._lock.release()
             self.update_delete(order)
-            self.lock.acquire()
+            self._lock.acquire()
 
     def update_delete(self, order: Order):
         traded_order = None
-        self.lock.acquire()
+        self._lock.acquire()
 
         for i in range(len(self.sortedOrderList)):
             if i < len(self.sortedOrderList) and order.price == self.sortedOrderList[i].price:
@@ -129,7 +131,7 @@ class OrderBookSide:
                 if order.quantity == 0:
                     traded_order = self.sortedOrderList.pop(i)
 
-        self.lock.release()
+        self._lock.release()
         return traded_order
 
 
@@ -234,13 +236,17 @@ class OrderBook:
 
     def getTotalFromDepth(self, depth, side='b'):
         total = 0.0
-        if side == 'b':
+        if side == 'b' and depth < len(self.bids):
             for i in range(depth):
-                total += self.bids.sortedOrderList[i].price * self.bids.sortedOrderList[i].quantity
-        elif side == 'a':
+                total += self.bids.sortedOrderList[i].quantity
+        elif side == 'a' and depth < len(self.asks):
             for i in range(depth):
-                total += self.asks.sortedOrderList[i].price * self.asks.sortedOrderList[i].quantity
+                total += self.asks.sortedOrderList[i].quantity
         return total
+
+    def getTotalFromPrice(self, price, side='b'):
+        return self.getTotalFromDepth(self.getDepthOfPrice(price, side), side)
+
 
     def __str__(self):
         self.health_check()

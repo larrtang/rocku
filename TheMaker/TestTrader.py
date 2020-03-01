@@ -5,12 +5,15 @@ BID = 'b'
 ASK = 'a'
 
 
+
 def can_buy(market_state: MarketState) -> bool:
-    return market_state.portfolio_dict[market_state.base] > 0.0
+    return market_state.power[market_state.base] > 0.00001 \
+           and market_state.order_book.getTotalFromDepth(4, 'b') < 3
 
 
 def can_sell(market_state: MarketState) -> bool:
-    return market_state.portfolio_dict[market_state.target] > 0.0
+    return market_state.power[market_state.target] > 0.00001 \
+           and market_state.order_book.getTotalFromDepth(4, 'a') < 3
 
 
 class TestTrader:
@@ -18,9 +21,11 @@ class TestTrader:
         self.DEFAULT_POSITION_QUANTITY = 0.01
         self.MAX_SPREAD_WIDTH = 3.1
         self.MIN_SPREAD_WIDTH = 1
-        self.AUTO_CANCEL_PRICE_THRESHOLD = 3
-        self.AUTO_CANCEL_DEPTH_THRESHOLD = 25
+        self.AUTO_CANCEL_PRICE_THRESHOLD = 2.5
+        self.AUTO_CANCEL_DEPTH_THRESHOLD = 40
+
         self.do_once_done = False
+
 
     def submit_depth_order(self, market_state: MarketState, side, depth, quantity):
         # depth starts at 0 (top of book)
@@ -81,33 +86,45 @@ class TestTrader:
 
     def on_trade_event(self, market_state: MarketState):
         #self.do_once_beginning(market_state)
-        mid_dist = 0.5
+        mid_dist = 0.7
         if market_state.num_alerts >= 2:
             mid_dist *= 2
 
         b = -mid_dist
-        if market_state.calc_value_ratio() > 0.2:
-            b -= 0.2
+        if market_state.calc_value_ratio() > 0.24:
+            b -= 0.5
 
         if len(market_state.open_orders.bids) == 0:
             if can_buy(market_state):
                 self.submit_depth_price_order(market_state,
                                               side=BID,
-                                              depth=0,
+                                              depth=1,
                                               price_offset=b,
                                               quantity=self.DEFAULT_POSITION_QUANTITY)
-        if len(market_state.open_orders.asks) == 0:
+        # if len(market_state.open_orders.asks) == 0:
+        if len(market_state.open_orders.bids) > 0:
             if can_sell(market_state):
                 ask_position_quantity = self.DEFAULT_POSITION_QUANTITY
-                if market_state.calc_value_ratio() > 0.2:
+                if market_state.calc_value_ratio() > 0.5:
+                    ask_position_quantity = self.DEFAULT_POSITION_QUANTITY * 2.5
+                elif market_state.calc_value_ratio() > 0.3:
                     ask_position_quantity = self.DEFAULT_POSITION_QUANTITY * 2
 
-                self.submit_depth_price_order(market_state,
-                                              side=ASK,
-                                              depth=0,
-                                              price_offset=mid_dist,
-                                              quantity=ask_position_quantity)
+                # self.submit_depth_price_order(market_state,
+                #                               side=ASK,
+                #                               depth=0,
+                #                               price_offset=mid_dist,
+                #                               quantity=ask_position_quantity)
 
+# FIXME something logically is not right, more sells are happening than buys, buying power and portfolio values are going negative.
+
+                target_spread = mid_dist * 2
+                market_state.new_limit_sell(Order(price=market_state.last_filled_bid.price+target_spread,
+                                                  quantity=ask_position_quantity,
+                                                  pos_quantity=ask_position_quantity,
+                                                  side='a'))
+
+# END FIXME
         self.auto_cancel_orders(market_state)
 
     def do_once_beginning(self, market_state: MarketState):
@@ -139,6 +156,8 @@ class TestTrader:
             or (market_state.order_book.getDepthOfPrice(bbook[i].price, side='b') >= self.AUTO_CANCEL_DEPTH_THRESHOLD):
                 market_state.cancel_limit_buy(bbook[i])
                 #bbook.pop(i)
+            elif market_state.order_book.getTotalFromPrice(bbook[i].price, side='b') > 6.0:
+                market_state.cancel_limit_buy(bbook[i])
 
             else:
                 break
@@ -147,6 +166,10 @@ class TestTrader:
             or (market_state.order_book.getDepthOfPrice(abook[i].price, side='a') >= self.AUTO_CANCEL_DEPTH_THRESHOLD):
                 market_state.cancel_limit_sell(abook[i])
                 #abook.pop(i)
+
+            elif market_state.order_book.getTotalFromPrice(abook[i].price, side='a') > 6:
+                market_state.cancel_limit_sell(abook[i])
+
             else:
                 break
         # if len(bbook) == market_state.open_orders.depth or len(abook) == market_state.open_orders.depth:

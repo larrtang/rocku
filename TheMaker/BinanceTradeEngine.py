@@ -5,6 +5,7 @@ from binance.websockets import BinanceSocketManager
 import os
 import sys
 import traceback
+import logging
 
 from OrderBook import OrderBook, Order
 from MarketState import MarketState
@@ -13,13 +14,18 @@ from TestTrader import TestTrader
 # import Playbook
 
 
+logging.basicConfig(filename="TheMaker.log", filemode='w', level=logging.DEBUG)
+logger = logging.getLogger("BinanceEngine")
+
 class BinanceTradeEngine:
     def __init__(self, market='BTCUSDT'):
         self.api_key = os.getenv("binance_api_key")
         self.api_secret = os.getenv("binance_api_secret")
         self.client = Client(self.api_key, self.api_secret)
+        logger.info("Starting Binance Trading Engine.")
         self.market = market
         self.__process_initial_book_state()
+        logger.info("Book state initialized.")
         self.trader = TestTrader()
         self.socketManager = BinanceSocketManager(self.client, user_timeout=60)
         self.book_diff = self.socketManager.start_depth_socket(market, self.depthUpdateHandler)
@@ -30,6 +36,7 @@ class BinanceTradeEngine:
 
     def start(self):
         self.socketManager.start()
+        logger.info("Socket Manager started.")
 
     def __process_initial_book_state(self):
         self.market_state = MarketState(self.market)
@@ -57,6 +64,8 @@ class BinanceTradeEngine:
             print(e)
             print(e.args)
             print("LAST TRADE: "+str(self.market_state.last_trade))
+            logger.critical(msg=e)
+            logger.critical(msg="LAST TRADE: "+str(self.market_state.last_trade))
             self.socketManager.close()
             traceback.print_exc()
     done = False
@@ -75,6 +84,9 @@ class BinanceTradeEngine:
         except Exception as e:
             print(e)
             print(e.args)
+            print("LAST TRADE: "+ str(self.market_state.last_trade))
+            logger.critical(msg=e)
+            logger.critical(msg="LAST TRADE: " + str(self.market_state.last_trade))
             self.socketManager.close()
             traceback.print_exc()
 

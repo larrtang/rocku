@@ -3,6 +3,16 @@ from OrderBook import OrderBook, Order
 import copy
 import threading
 import time
+import logging
+
+
+BID = 'b'
+ASK = 'a'
+
+logger = logging.getLogger("MarketState")
+# logger.addHandler(logging.FileHandler("TheMaker_orders.log"))
+# logger.setLevel(logging.DEBUG)
+
 
 class MarketState:
     """Market state and information that trading reacts upon"""
@@ -35,17 +45,20 @@ class MarketState:
 
         self.num_buy_orders = 0
         self.num_sell_orders = 0
+        self.sum_of_buy_values = 0.0
+        self.sum_of_sell_values = 0.0
+
         self.num_buy_cancels = 0
         self.num_sell_cancels = 0
         self.total_buy_quantity = 0.0
         self.total_sell_quantity = 0.0
 
-        self.VOLUME_ALERT_THRESH = 30
+        self.VOLUME_ALERT_THRESH = 40
         self.historical_volume = [{"vol": 0.0, "alert": 0.0}]
         self.history_len = 6
-        self.historical_thread = threading.Thread(target=self.__update_historical_volume)
-        self.historical_lock = threading.Lock()
-        self.historical_thread.start()
+        self._historical_thread = threading.Thread(target=self.__update_historical_volume)
+        self._historical_lock = threading.Lock()
+        self._historical_thread.start()
         self.num_alerts = 0
 
 
@@ -99,14 +112,14 @@ class MarketState:
             self.last_trade.side = 'a'
         self.last_trade_msg = msg
 
-        self.historical_lock.acquire()
+        self._historical_lock.acquire()
         self.historical_volume[0]["vol"] += self.last_trade.quantity
-        self.historical_lock.release()
+        self._historical_lock.release()
 
     def __update_historical_volume(self):
         while True:
             time.sleep(60)
-            self.historical_lock.acquire()
+            self._historical_lock.acquire()
 
             if self.historical_volume[0]['vol'] > self.VOLUME_ALERT_THRESH:
                 self.historical_volume[0]['alert'] = 1.0
@@ -118,7 +131,7 @@ class MarketState:
                 if popped['alert'] > 0.0:
                     self.num_alerts -= 1
 
-            self.historical_lock.release()
+            self._historical_lock.release()
 
     def __historical_volume_str__(self):
         ret = ""
@@ -135,7 +148,18 @@ class MarketState:
         else:
             return -1
 
+    def getAverageBuyPrice(self) -> float:
+        if self.total_buy_quantity > 0:
+            return self.sum_of_buy_values / self.total_buy_quantity
+        return -1.0
 
+    def getAverageSellPrice(self) -> float:
+        if self.total_sell_quantity > 0:
+            return self.sum_of_sell_values / self.total_sell_quantity
+        return -1.0
+
+    last_filled_bid = None
+    last_filled_ask = None
     def binance_incremental_trade_update_handler(self, msg):
         traded_orders = self.order_book.binance_incremental_trade_update_handler(msg)
         traded_open_orders = self.open_orders.binance_incremental_trade_update_handler(msg)
@@ -143,6 +167,7 @@ class MarketState:
             self.last_trade_orders = traded_orders
         for traded_order in traded_orders:
             if traded_order is not None and traded_order.position_quantity > 0:
+                logger.debug("ORDER FILLED\t\t:\t-> {}".format(traded_order))
                 self.num_trades += 1
                 if traded_order.side == 'b':
                     # Bid got filled
@@ -151,20 +176,38 @@ class MarketState:
                     self.portfolio_dict['BTC'] += traded_order.position_quantity * (1-self.MAKER_FEE)
                     self.power['BTC'] += traded_order.position_quantity * (1 - self.MAKER_FEE)
                     self.portfolio_dict['USDT'] -= traded_order.price * traded_order.position_quantity
+                    self.sum_of_buy_values += traded_order.price * traded_order.position_quantity
+                    self.last_filled_bid = traded_order
                 else:
                     # Ask got filled
                     self.num_sell_orders += 1
                     self.total_sell_quantity += traded_order.position_quantity
                     self.portfolio_dict['BTC'] -= traded_order.position_quantity
-                    self.portfolio_dict['USDT'] += traded_order.price * traded_order.position_quantity\
+                    self.portfolio_dict['USDT'] += traded_order.price * traded_order.position_quantity \
                                                    * (1-self.MAKER_FEE)
                     self.power['USDT'] += traded_order.price * traded_order.position_quantity \
                                                    * (1 - self.MAKER_FEE)
 
+                    # no maker fee included
+                    self.sum_of_sell_values += traded_order.price * traded_order.position_quantity
+
+                    self.last_filled_ask = traded_order
+
+                #round
+                self.__round_portfolio()
+
+    def __round_portfolio(self):
+        """Rounds everything off after calculations"""
+        self.portfolio_dict[self.target] = round(self.portfolio_dict[self.target], 4)
+        self.portfolio_dict[self.base] = round(self.portfolio_dict[self.base], 4)
+        self.power[self.target] = round(self.power[self.target], 4)
+        self.power[self.base] = round(self.power[self.base], 4)
 
     def __str__(self):
+        self.__health_check()
+
         return "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n" \
-               "\nPortfolio\t: "+str(self.portfolio_dict)+ "\t{:12.4f}".format(self.calc_value_ratio()) + \
+               "\nPortfolio\t: "+str(self.portfolio_dict)+ "{:12.4f}".format(self.calc_value_ratio()) + \
                "\n(b/s)power\t: " + str(self.power) + \
                "\nPortfolio_value\t= "+str(self.getPortfolioValue())+ \
                "\nStart_value\t= "+str(self.getStartingPortfolioValue())+\
@@ -177,6 +220,8 @@ class MarketState:
                "\ncancels \t= "+ str(self.num_buy_cancels+self.num_sell_cancels)+\
                "\tb: " + str(self.num_buy_cancels) + \
                "\ts: " + str(self.num_sell_cancels) + \
+               "\navg price\t:\tb: {:2.4f}".format(self.getAverageBuyPrice()) + \
+               "\ts: {:2.4f}".format(self.getAverageSellPrice()) + \
                "\npos_spread\t= "+ str(self.getPositionSpread()) + \
                "\n\nLast Trade\t= " + \
                str(self.last_trade) + \
@@ -185,16 +230,22 @@ class MarketState:
 
     """Mock Trading Stuff"""
     def new_limit_buy(self, order: Order):
+        logger.debug("new_limit_buy\t\t: {}".format(order))
         self.order_book.add_modify_delete(order, side='b', my_order=True)
         self.open_orders.add_modify_delete(order, side='b', my_order=True)
         self.power['USDT'] -= order.price * order.position_quantity
+        self.__round_portfolio()
 
     def new_limit_sell(self, order: Order):
+        logger.debug("new_limit_sell\t: {}".format(order))
         self.order_book.add_modify_delete(order, side='a', my_order=True)
         self.open_orders.add_modify_delete(order, side='a', my_order=True)
         self.power['BTC'] -= order.position_quantity
+        self.__round_portfolio()
 
     def cancel_limit_buy(self, order: Order):
+        assert (order.side == BID)
+        logger.debug("cancel_limit_buy\t: {}".format(order))
       #  print("order cancel coming in  :", order)
         self.order_book.add_modify_delete(Order(order.price, quantity=0.0, pos_quantity=0.0),
                                           side='b', my_order=True)
@@ -202,8 +253,11 @@ class MarketState:
                                           side='b', my_order=True)
         self.power['USDT'] += order.price * order.position_quantity
         self.num_buy_cancels += 1
+        self.__round_portfolio()
 
     def cancel_limit_sell(self, order: Order):
+        assert(order.side == ASK)
+        logger.debug("cancel_limit_sell\t: {}".format(order))
       #  print("order cancel coming in  :", order)
         self.order_book.add_modify_delete(Order(order.price, quantity=0.0, pos_quantity=0.0, side='a'),
                                           side='a', my_order=True)
@@ -211,7 +265,24 @@ class MarketState:
                                            side='a', my_order=True)
         self.power['BTC'] += order.position_quantity
         self.num_sell_cancels += 1
+        self.__round_portfolio()
 
+
+    def __health_check(self):
+        self.order_book.health_check()
+        self.open_orders.health_check()
+
+        # verify buying power is less than portfolio values
+        if self.power[self.base] > self.portfolio_dict[self.base] \
+                or self.power[self.target] > self.portfolio_dict[self.target]:
+            raise Exception("Buying power exceeds portfolio value:\nportfolio:\t{}\nBuying power:\t{}\nLast Trade:\t{}\n"
+                            .format(self.portfolio_dict, self.power, self.last_trade))
+
+        # verify buying power and portfolio values are not negative
+        if self.power[self.base] < -0.0000001 or self.power[self.target] < -0.0000001:
+            raise Exception("Buying power is negative:{}".format(self.power))
+        if self.portfolio_dict[self.base] < -0.0000001 or self.portfolio_dict[self.target] < -0.0000001:
+            raise Exception("Portfolio value is negative:{}".format(self.portfolio_dict))
 
 class C:
     HEADER = '\033[95m'
