@@ -5,6 +5,8 @@ BID = 'b'
 ASK = 'a'
 
 class Order:
+    """MBP Price Level"""
+
     def __init__(self, price, quantity, pos_quantity=0.0, side='b'):
         assert type(price) is float
         assert type(quantity) is float
@@ -55,6 +57,9 @@ class OrderBookSide:
 
     def __add_modify_delete_bid(self, order: Order, my_order):
         if order.quantity > 0:
+            if len(self.sortedOrderList) == 0:
+                self.sortedOrderList.append(order)
+                return
             for i in range(len(self.sortedOrderList)):
                 [p,q] = [self.sortedOrderList[i].price, self.sortedOrderList[i].quantity]
                 if order.price > p:
@@ -90,6 +95,9 @@ class OrderBookSide:
 
     def __add_modify_delete_ask(self, order: Order, my_order):
         if order.quantity > 0:
+            if len(self.sortedOrderList) == 0:
+                self.sortedOrderList.append(order)
+                return
             for i in range(len(self.sortedOrderList)):
                 [p, q] = [self.sortedOrderList[i].price, self.sortedOrderList[i].quantity]
                 if order.price < p:
@@ -247,6 +255,8 @@ class OrderBook:
     def getTotalFromPrice(self, price, side='b'):
         return self.getTotalFromDepth(self.getDepthOfPrice(price, side), side)
 
+    def get_total_order_count(self) -> int:
+        return len(self.bids) + len(self.asks)
 
     def __str__(self):
         self.health_check()

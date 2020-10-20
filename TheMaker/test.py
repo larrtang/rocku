@@ -1,5 +1,10 @@
+#!/usr/bin/python
+
 from MarketState import MarketState
 from OrderBook import OrderBook, Order
+from BinanceTradeEngine import BinanceTradeEngine
+from random import randrange
+import random
 
 BID = 'b'
 ASK = 'a'
@@ -7,16 +12,13 @@ ASK = 'a'
 
 
 def can_buy(market_state: MarketState) -> bool:
-    return market_state.power[market_state.base] > 0.00001 \
-           and market_state.order_book.getTotalFromDepth(4, 'b') < 5
+    return market_state.power[market_state.base] > 0.001
 
 
 def can_sell(market_state: MarketState) -> bool:
-    return market_state.power[market_state.target] > 0.00001 \
-           and market_state.order_book.getTotalFromDepth(4, 'a') < 5
+    return market_state.power[market_state.target] > 0.001
 
-
-class TestTrader:
+class Test:
     def __init__(self):
         self.DEFAULT_POSITION_QUANTITY = 0.01
         self.MAX_SPREAD_WIDTH = 3.1
@@ -30,6 +32,8 @@ class TestTrader:
     def submit_depth_order(self, market_state: MarketState, side, depth, quantity):
         # depth starts at 0 (top of book)
         if side == BID:
+            if depth >= len(market_state.order_book.bids):
+                return None
             price = market_state.order_book.bids.sortedOrderList[depth].price + market_state.MIN_TICK
             new_order = Order(price=price,
                               quantity=quantity,
@@ -37,6 +41,8 @@ class TestTrader:
                               side=side)
             market_state.new_limit_buy(new_order)
         else:
+            if depth >= len(market_state.order_book.asks):
+                return None
             price = market_state.order_book.asks.sortedOrderList[depth].price - market_state.MIN_TICK
             new_order = Order(price=price,
                               quantity=quantity,
@@ -84,7 +90,7 @@ class TestTrader:
             market_state.new_limit_sell(new_order)
         return new_order
 
-    def on_trade_event(self, market_state: MarketState):
+    def on_trade_update(self, market_state: MarketState):
         #self.do_once_beginning(market_state)
         mid_dist = 4
         if market_state.num_alerts >= 2:
@@ -94,27 +100,14 @@ class TestTrader:
         if market_state.calc_value_ratio() > 0.24:
             b -= 0.5
 
-        if len(market_state.open_orders.bids) == 0:
+        if len(market_state.open_orders.bids) == 0 or True:
             if can_buy(market_state):
-                self.submit_depth_price_order(market_state,
-                                              side=BID,
-                                              depth=1,
-                                              price_offset=b,
-                                              quantity=self.DEFAULT_POSITION_QUANTITY)
-        if len(market_state.open_orders.asks) == 0:
+                self.submit_depth_order(market_state, side=BID, depth=randrange(4), quantity=0.01)
+
+        if len(market_state.open_orders.asks) == 0 or True:
         #if len(market_state.open_orders.bids) > 0:
             if can_sell(market_state):
-                ask_position_quantity = self.DEFAULT_POSITION_QUANTITY
-                if market_state.calc_value_ratio() > 0.5:
-                    ask_position_quantity = self.DEFAULT_POSITION_QUANTITY * 3
-                elif market_state.calc_value_ratio() > 0.3:
-                    ask_position_quantity = self.DEFAULT_POSITION_QUANTITY * 2
-
-                self.submit_depth_price_order(market_state,
-                                              side=ASK,
-                                              depth=0,
-                                              price_offset=mid_dist,
-                                              quantity=ask_position_quantity)
+                self.submit_depth_order(market_state, side=ASK, depth=randrange(4), quantity=0.01)
 
 # FIXME something logically is not right, more sells are happening than buys, buying power and portfolio values are going negative.
 # FIXME Problem still exists, buying power will exceed portfolio value, sell orders are being placed when they shouldn't
@@ -145,7 +138,7 @@ class TestTrader:
                                           quantity=self.DEFAULT_POSITION_QUANTITY)
 
 
-    def on_book_event(self, market_state : MarketState):
+    def on_depth_update(self, market_state : MarketState):
         self.auto_cancel_orders(market_state)
 
     def auto_cancel_orders(self, market_state: MarketState):
@@ -185,9 +178,24 @@ class TestTrader:
         a = b + width
         return b, a
 
-    def on_depth_update(self, market_state):
-        self.on_book_event(market_state)
-    def on_trade_update(self, market_state):
-        self.on_trade_event(
-            market_state
-        )
+
+
+def speed_test():
+    orderbook = OrderBook("")
+    for i in range(1000):
+        j = randrange(0,2)
+        if j == 0:
+            order = Order(float(random.uniform(1.0, 5.0)), float(randrange(0, 3)), 0.0, BID)
+            orderbook.add_modify_delete(order, BID)
+        else:
+            order = Order(float(random.uniform(5.0, 9.0)), float(randrange(0, 3)), 0.0, ASK)
+            orderbook.add_modify_delete(order, ASK)
+
+        print(orderbook)
+
+if __name__ == "__main__":
+   # speed_test()
+
+     engine = BinanceTradeEngine()
+     engine.trader = Test()
+     engine.start()
